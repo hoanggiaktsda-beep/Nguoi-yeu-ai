@@ -1,37 +1,67 @@
-# NGƯỜI YÊU AI
+# NGƯỜI YÊU AI 🇻🇳
 
-V2: một AI companion cố định, có Character DNA, Relationship DNA, roleplay và long-term memory.
+AI companion **thuần Việt**: một nhân vật cố định, Character DNA, Relationship DNA, ký ức dài hạn, trạng thái mô phỏng, Social Life và nền tảng AI voice.
+
+## Đã tích hợp
+
+- Mobile riêng cho điện thoại và layout 3 cột cho PC.
+- Logo chung `logo.svg`.
+- Character DNA: lý lịch, quê quán, nghề nghiệp, học vấn, khuôn mặt, tóc, vóc dáng, phong cách, Voice DNA, tính cách, giá trị và sở thích.
+- Relationship Stage: mới làm quen / đang tìm hiểu / người yêu / vợ-chồng.
+- Relationship & Intimacy DNA: lãng mạn, flirty, âu yếm, táo bạo, tinh nghịch, đam mê, ngại ngùng, chủ động, riêng tư.
+- Phần intimacy chỉ điều chỉnh biểu đạt tình cảm trưởng thành; hệ thống không tạo nội dung tình dục đồ họa.
+- Vietnamese-first: tiếng Việt mặc định, vùng giọng Bắc/Trung/Nam, xưng hô theo quan hệ.
+- Emotion Engine: đói, mệt, sức khỏe, mong muốn, sức hút, ghen, tâm trạng, năng lượng, tình cảm, tin tưởng.
+- Memory Engine: profile / preference / episode / relationship / important; có thể xóa.
+- Social Life Engine: Trend Scanner + Social Memory + Personal Interest; hiện fallback mô phỏng ở frontend, backend đã có bảng và API trend Việt Nam.
+- Character Brain: server kết hợp Character DNA + Relationship + Emotion + Memory + Social context.
+- AI Voice DNA: chỉ định hướng AI voice; không nhận/clone giọng người thật.
+- Avatar và ảnh nền lưu cục bộ trên thiết bị.
+- Không đặt secret/API key trong GitHub Pages.
 
 ## Kiến trúc
-- Giao diện + mã nguồn: GitHub Pages.
-- API AI: Cloudflare Worker.
-- Model: Cloudflare Workers AI.
-- Bộ nhớ dài hạn: Cloudflare D1.
-- Khi chưa cấu hình API, website vẫn chạy chế độ local.
 
-GitHub Pages là hosting tĩnh, nên không thể tự chạy backend/AI server. Public repo trên GitHub Free có thể dùng GitHub Pages.
+GitHub Pages → Cloudflare Worker → Workers AI → D1.
 
-## Đã nâng cấp
-- Character DNA mở rộng: background, face, hair, body, style, voice, personality, signature.
-- Mối quan hệ ban đầu: mới làm quen / đang tìm hiểu / người yêu / vợ-chồng.
-- Chat gọi API thật khi API_BASE được cấu hình.
-- Session ID riêng để tách bộ nhớ.
-- Server lưu messages + memories.
-- AI tự trích xuất ký ức quan trọng và cập nhật ký ức cũ.
-- Có API health, memories GET/DELETE.
-- Không đặt AI secret trong frontend.
+Cloudflare Workers AI hiện hỗ trợ chạy model serverless trên hạ tầng Cloudflare; D1 là database serverless có thể bind trực tiếp vào Worker.
 
-## Kích hoạt backend miễn phí
-1. Tạo tài khoản Cloudflare.
-2. Tạo Workers AI và D1 database tên nguoi-yeu-ai.
-3. Chạy api/schema.sql trên D1.
-4. Sửa api/wrangler.toml, thay REPLACE_WITH_D1_ID.
-5. Trong thư mục api chạy: npx wrangler login và npx wrangler deploy.
-6. Lấy URL Worker dạng https://ten-worker.ten-subdomain.workers.dev.
-7. Mở app.js và đặt const API_BASE = URL Worker.
-8. Commit lên main. GitHub Actions sẽ triển khai lại Pages.
+## Kích hoạt AI thật
 
-Workers AI hiện có free allocation theo ngày; D1 cũng có free plan nhưng có giới hạn sử dụng. Đây là hạn mức của Cloudflare và có thể thay đổi.
+1. Tạo Cloudflare D1 database tên `nguoi-yeu-ai`.
+2. Thay `REPLACE_WITH_D1_ID` trong `api/wrangler.toml`.
+3. Trong thư mục `api`, chạy:
 
-## Lưu ý
-Phiên bản này là prototype/personal app. Chưa có đăng nhập OAuth, thanh toán, moderation production hay bảo vệ abuse ở cấp hệ thống. Không đặt secret trong GitHub Pages.
+```bash
+npx wrangler login
+npx wrangler d1 execute nguoi-yeu-ai --remote --file=./schema.sql
+npx wrangler deploy
+```
+
+4. Lấy Worker URL dạng `https://...workers.dev`.
+5. Mở website → **⚙ Hệ thống AI** → dán Worker URL → Lưu.
+
+GitHub Pages chỉ phục vụ frontend tĩnh; Worker mới là nơi chạy AI và truy cập D1.
+
+## Social API Gateway
+
+Backend có:
+
+`GET /api/social/trends`
+
+Schema chuẩn hóa:
+
+`id, source, title, url, category, region=VN, language=vi, score, published_at, fetched_at, summary, tags`
+
+Collector thật cho TikTok / YouTube / Instagram / Facebook / Google Trends cần được cấu hình bằng API/quyền truy cập hợp lệ. Không scrape private feed và không coi dữ liệu mô phỏng là trend thật.
+
+## Voice
+
+Voice DNA đã được đặt theo nguyên tắc **AI voice only**. TTS adapter nên được nối ở Worker sau khi chọn provider/model phù hợp và kiểm tra free tier tại thời điểm triển khai. Không lưu hoặc clone giọng người thật.
+
+## Privacy
+
+Đây hiện là personal app. Trước khi mở rộng nhiều người dùng cần thêm authentication, rate limiting, abuse protection, data export/delete, kiểm soát CORS và chính sách lưu dữ liệu.
+
+## Nguyên tắc sản phẩm
+
+**Một cô ấy — một Character DNA — một dòng ký ức — một quan hệ liên tục — một thế giới sống bên ngoài cuộc trò chuyện.**
