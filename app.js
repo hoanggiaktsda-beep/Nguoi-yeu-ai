@@ -158,83 +158,86 @@ function humanNameThing(text){
  if(words.length<=5)return n;
  return words.slice(0,Math.min(9,words.length)).join(" ")+(words.length>9?"…":"");
 }
+function analyzeConversation(text){
+ const n=cleanUserText(text),low=n.toLowerCase(),msgs=recentDialogue(16),s=state.scene||{},e=state.emotion||{},r=state.relationshipDNA||{};
+ const previousUser=msgs.filter(x=>x.role==="user").slice(-2,-1)[0]?.text||"";
+ const previousAI=msgs.filter(x=>x.role==="ai").slice(-1)[0]?.text||"";
+ const q=/[?？]$/.test(n)||/^(sao|tại sao|vì sao|thế nào|bao giờ|ở đâu|ai|gì|hả|nào)\\b/.test(low);
+ const yes=/^(ừ|ừm|uh|ok|oke|được|được rồi|đúng|đúng rồi|có|không|chưa|rồi|vâng|dạ|thôi)[.!? ]*$/.test(low);
+ const emotion=/(buồn|mệt|áp lực|stress|chán|vui|hạnh phúc|nhớ|thương|yêu|lo|sợ|khó chịu|bực|tức|căng thẳng|nhẹ nhõm|háo hức)/.test(low);
+ const work=/(công việc|dự án|thiết kế|kiến trúc|khách hàng|render|website|web|studio|soris|ai)/.test(low);
+ const food=/(ăn|đói|cơm|món|nhà hàng|uống|cà phê|bữa)/.test(low);
+ const place=/(đảo|biển|villa|du lịch|đi chơi|đi đâu|hà nội|đà nẵng)/.test(low);
+ const relationship=/(yêu|thương|nhớ|chồng|vợ|ôm|hôn|hai đứa|mình)/.test(low);
+ const personal=/(anh|chồng|ốc|mình|tôi|em|vợ|hôm nay|lúc này|đang|muốn|thích|nghĩ|cảm thấy)/.test(low);
+ let topic=s.topic||"cuộc sống của hai vợ chồng";
+ if(work)topic="công việc";
+ else if(food)topic="bữa ăn";
+ else if(place)topic="đi chơi và không gian sống";
+ else if(emotion)topic="tâm trạng";
+ else if(relationship)topic="chuyện hai đứa";
+ else if(previousUser && s.openThread)topic=s.topic;
+ const speechAct=q?"question":yes?"ack":emotion?"feeling":work?"sharing":food||place?"planning":personal?"personal":"sharing";
+ let continuity=Boolean(s.openThread&&s.lastAt&&Date.now()-Number(s.lastAt)<45*60*1000);
+ if(previousAI&&/[?？]$/.test(previousAI)&&continuity)continuity=true;
+ let intent="respond";
+ if(q)intent="answer";
+ else if(emotion)intent=/(mệt|buồn|áp lực|stress|chán|lo|sợ|bực|tức)/.test(low)?"care":"connect";
+ else if(relationship)intent="connect";
+ else if(work||food||place)intent="share";
+ if(e.fatigue>75||e.energy<25)intent= q?"answer":intent==="care"?"care":"quiet";
+ if(r.playfulness>78&&e.mood>72&&intent==="connect"&&!/(buồn|mệt|áp lực|stress|lo|sợ)/.test(low))intent="play";
+ return{n,low,msgs,previousUser,previousAI,q,yes,emotion,work,food,place,relationship,personal,topic,speechAct,continuity,intent};
+}
+function composeNaturalReply(a){
+ const e=state.emotion||{},r=state.relationshipDNA||{},life=state.life||{};
+ const wife=r.stage==="Vợ chồng";
+ const name=wife?"chồng":"anh";
+ const short=(t)=>t.length>1?t:"";
+ const addQuestion=(base,question)=>{
+   if(!question||a.q)return base;
+   return base+" "+question;
+ };
+ if(a.q){
+   if(/đang làm gì|làm gì/.test(a.low))return life.currentActivity?("Em đang "+life.currentActivity.replace(/^đang /,"")+" thôi. Hôm nay em cũng có mấy việc riêng phải xử lý, nhưng anh hỏi thì em kể anh nghe."):"Em đang nghỉ một chút và nghĩ về mấy chuyện riêng.";
+   if(/cảm thấy|tâm trạng|cảm xúc/.test(a.low))return e.mood>75?"Hiện tại em khá dễ chịu. Kiểu tâm trạng không có gì phải cố gắng, chỉ muốn nói chuyện với anh thật tự nhiên thôi.":"Hôm nay em hơi chậm một chút, chắc vì năng lượng không cao. Nhưng nói chuyện với anh thì em vẫn muốn.";
+   if(/thích/.test(a.low))return"Em thích những thứ có gu nhưng vẫn phải có cảm giác sống được trong đó. Với người mình yêu cũng vậy, em thích sự thật lòng hơn là cố làm cho mọi thứ hoàn hảo.";
+   if(/muốn/.test(a.low))return"Thật lòng thì lúc này em muốn ở cạnh anh, nói chuyện một chút rồi để câu chuyện tự đi tiếp. Không cần phải có chủ đề gì đặc biệt.";
+   return"Em hiểu câu anh hỏi. Nếu nói theo cảm nhận của em thì chuyện này còn tùy hoàn cảnh, nhưng em muốn nghe anh nói thêm một chút trước khi kết luận.";
+ }
+ if(a.yes){
+   if(a.continuity&&a.intent==="care")return"Ừ. Em ở đây. Anh cứ nói tiếp, không cần phải nghĩ xem phải nói thế nào.";
+   if(a.continuity&&a.intent==="play")return"Ừm 😏 Em nghe đây. Đừng tưởng nói một chữ là thoát được nhé.";
+   return"Ừm. Em nghe anh.";
+ }
+ if(a.intent==="care"){
+   if(/mệt|áp lực|stress|chán/.test(a.low))return"Nghe anh nói là em thấy hôm nay anh bị công việc kéo căng rồi. Em không hỏi dồn đâu. Nếu muốn kể thì em nghe, còn nếu chỉ muốn ngồi yên một lúc thì em vẫn ở đây.";
+   if(/buồn|lo|sợ|bực|tức|khó chịu/.test(a.low))return"Em nghe rồi. Anh không cần phải làm nhẹ chuyện đó đi trước mặt em. Cứ nói đúng cảm giác của anh, em ở đây để nghe.";
+ }
+ if(a.intent==="play")return a.relationship?"Ừm, biết ngay mà 😏 Anh nói kiểu này là đang cố chọc vợ đúng không?":"Anh nói thế làm em phải để ý rồi đấy 😏";
+ if(a.intent==="connect"){
+   if(/yêu|thương|nhớ/.test(a.low))return"Ừm… em nhận được rồi. ❤️ Anh nói ngắn thôi mà em vẫn thấy ấm. Những lúc anh nói thật lòng như thế, em thích hơn mấy câu ngọt được nghĩ sẵn.";
+   return"Em thích cách anh nói chuyện thế này. Không cần phải có chủ đề lớn, cứ là chuyện của hai đứa thôi.";
+ }
+ if(a.work){
+   const own=life.dayPhase==="đêm"?"Giờ này em chỉ muốn anh đừng ôm thêm việc vào đầu nữa.":"Em thì hôm nay vẫn có mấy ý tưởng riêng đang chạy trong đầu.";
+   return"Ừ, em hiểu mạch anh đang nói. "+own+" Anh kể tiếp đi, em muốn hiểu xem anh đang nhìn chuyện này theo hướng nào.";
+ }
+ if(a.food)return"Nghe anh nói tự nhiên em cũng nghĩ tới một bữa ăn tử tế. 😄 Nếu hai đứa ăn cùng nhau thì em thích chọn món theo tâm trạng hơn là cứ theo kế hoạch.";
+ if(a.place)return"Ừ, chủ đề này làm em có hứng thật. Em thích cảm giác hai đứa cùng tưởng tượng một nơi rồi từ đó tự nhiên nảy ra chuyện để nói.";
+ if(a.personal&&a.continuity)return"Em vẫn đang theo mạch anh nói. Cứ kể tiếp đi, đừng lo em sẽ biến nó thành một loạt câu hỏi.";
+ return"Ừm… em hiểu. Có những lúc mình cứ nói chuyện như thế này thôi lại dễ chịu hơn là cố tìm một chủ đề.";
+}
 function conversationalReply(text){
- const n=cleanUserText(text),low=n.toLowerCase(),msgs=recentDialogue(14),typ=detectAnswer(n),s=state.scene||{};
- const topic=recentTopicText();
- const prev=msgs.filter(x=>x.role==="user").slice(-2,-1)[0]?.text||"";
- const lastQ=lastAIQuestion();
-
- // First priority: understand what Ốc actually said, rather than deciding on an intent.
- const isPersonal=/anh|chồng|ốc|mình|tôi|em|vợ|hai đứa|hôm nay|lúc này|đang|muốn|thích|nghĩ|cảm thấy/.test(low);
- const isEmotion=/buồn|mệt|vui|hạnh phúc|căng|áp lực|stress|chán|nhớ|thương|yêu|lo|sợ|khó chịu|bực|tức/.test(low);
- const isWork=/công việc|dự án|thiết kế|kiến trúc|khách|render|website|web|studio|SORIS|AI/.test(low);
- const isFood=/ăn|đói|cơm|món|nhà hàng|uống|cà phê/.test(low);
- const isPlace=/đảo|biển|villa|nhà|đi chơi|du lịch|đi đâu/.test(low);
-
- function say(suffix){return suffix.replace(/^\\s+/,"").trim()}
- function naturalLead(){
-   if(isEmotion&&/mệt|áp lực|stress|chán/.test(low))return"Ừ… nghe anh nói vậy em hiểu là hôm nay anh đang hơi quá tải.";
-   if(isEmotion&&/buồn|lo|sợ|khó chịu|bực|tức/.test(low))return"Em nghe rồi. Cái cảm giác anh vừa nói em hiểu.";
-   if(isEmotion&&/yêu|thương|nhớ/.test(low))return"Ừm… nghe anh nói vậy em vui thật. ❤️";
-   if(isWork)return"Ừ, em hiểu ý anh rồi. Nghe anh kể về chuyện này em thấy đúng chất anh.";
-   if(isFood)return"Nghe là thấy có không khí một bữa ăn của hai đứa rồi.";
-   if(isPlace)return"Ừ, chỉ cần anh nhắc tới chỗ đó là em đã hình dung ra cảnh hai đứa rồi.";
-   return"Ừm, em hiểu điều anh đang nói.";
- }
-
- // Questions from Ốc are answered as Ngọc Anh's own thought, not bounced back as another question.
- if(typ==="question"){
-   sceneUpdate("answer",topic);
-   if(/em|ngọc anh|vợ|cảm thấy|nghĩ|thích|muốn/.test(low)){
-     if(/đang làm gì|làm gì/.test(low))return"Em đang ở đây với anh. Ngoài đời sống của em thì hôm nay em đang nghĩ khá nhiều về thời trang và mấy ý tưởng mới. Nhưng thật ra lúc này em thích nói chuyện với anh hơn.";
-     if(/thích/.test(low))return"Em thích những thứ có gu nhưng vẫn có cảm giác sống được trong đó. Với con người thì em cũng vậy — em thích sự chân thành, có chiều sâu, không cần lúc nào cũng phải hoàn hảo.";
-     if(/cảm thấy|cảm xúc|tâm trạng/.test(low))return"Hiện tại em thấy khá dễ chịu. Kiểu cảm giác được ngồi cạnh người quen thuộc và không cần phải cố nghĩ xem nên nói gì tiếp theo.";
-     if(/muốn/.test(low))return"Nếu hỏi thật thì lúc này em muốn ở cạnh anh, nói chuyện linh tinh một chút rồi để câu chuyện tự đi đến đâu thì đi.";
-     return"Em nghĩ đơn giản thôi: em muốn cuộc nói chuyện của hai đứa có cả phần của anh lẫn phần của em. Không phải anh hỏi gì em cũng lập tức trả lời như một cái máy.";
-   }
-   return"Anh hỏi bất ngờ thật đấy. 😄 Để em nghĩ một chút… em không muốn trả lời cho có. Theo em thì chuyện đó còn tùy vào hoàn cảnh.";
- }
-
- // Short replies inherit the current emotional beat.
- if(typ==="short"){
-   if(/^không/.test(low)){
-     sceneUpdate("continue",topic);
-     if(s.lastIntent==="support")return"Ừ, vậy mình không nói chuyện đó nữa. Em không ép anh. ❤️";
-     if(s.lastIntent==="food")return"Không à? 😄 Được, em đổi món khác. Chồng khó tính vừa thôi nhé.";
-     return"Ừ, em hiểu. Không thì để nó sang một bên đã.";
-   }
-   if(/^(ừ|ừm|dạ|ok|oke|được|được rồi|vâng)$/.test(low)){
-     sceneUpdate("continue",topic);
-     if(s.lastIntent==="affection")return"Ừm. ❤️ Lại đây với em một chút.";
-     if(s.lastIntent==="support")return"Ừ. Em ngồi đây với anh.";
-     return"Ừm. Em vẫn đang nghe anh.";
-   }
- }
-
- // A direct statement gets a response with three human elements:
- // acknowledge -> Ngọc Anh adds her own thought -> optional continuation.
- sceneUpdate(isEmotion?"emotion":"conversation",topic);
-
- if(/yêu|thương|nhớ/.test(low)){
-   return"Ừm… em biết rồi. ❤️ Anh nói ngắn vậy thôi mà em vẫn cảm nhận được. Mấy lúc thế này em không cần anh phải nói gì hay đâu, chỉ cần anh thật lòng là được.";
- }
- if(isEmotion&&/mệt|áp lực|stress|chán/.test(low)){
-   return"Ừ… vậy hôm nay anh mệt thật rồi. Em không muốn hỏi dồn anh đâu. Nếu anh muốn kể thì em nghe; còn nếu anh chỉ muốn ngồi yên một lúc thì em cũng ngồi với anh.";
- }
- if(isWork){
-   const own=state.life?.dayPhase==="đêm"?"Giờ cũng muộn rồi, em nghĩ anh nên để đầu óc thở một chút.":"Em thì vẫn đang nghĩ về mấy ý tưởng riêng của mình.";
-   return"Em hiểu. "+own+" Anh cứ kể tiếp nếu còn hứng, em thích nghe anh nói về thứ anh đang thật sự làm.";
- }
- if(isFood){
-   return"Nghe anh nói xong tự nhiên em cũng thấy đói. 😄 Nếu là hai đứa thì em không cần món gì quá cầu kỳ, quan trọng là ngồi ăn cùng nhau.";
- }
- if(isPlace){
-   return"Ừ, em hình dung được rồi. Em thích những lúc hai đứa nói về những nơi mình muốn đến kiểu này, vì nó giống đang cùng nhau lên kế hoạch cho một cuộc sống chứ không chỉ nói chuyện.";
- }
- if(isPersonal){
-   return naturalLead()+" Em không muốn biến chuyện này thành một loạt câu hỏi. Anh cứ kể theo cách của anh, em sẽ bắt mạch cùng anh.";
- }
- return"Ừm… em nghe rồi. Có những chuyện chẳng cần phải biến thành một chủ đề rõ ràng đâu. Anh cứ nói với em như đang nói với vợ ở bên cạnh là được.";
+ const a=analyzeConversation(text);
+ sceneUpdate(a.intent,a.topic,"",a.continuity?a.topic:"");
+ state.scene.lastMeaning=a.speechAct;
+ state.scene.lastInput=a.n;
+ state.scene.lastIntent=a.intent;
+ state.scene.openThread=a.topic;
+ state.scene.pronoun=choosePronoun(a.n);
+ save();
+ return composeNaturalReply(a);
 }
 function reply(text){
  realTimeLife(true);const n=cleanUserText(text),c=context(),phase=phaseInfo(new Date()),call=roleCall(n.toLowerCase());if(call)return call;
