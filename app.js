@@ -159,81 +159,82 @@ function humanNameThing(text){
  return words.slice(0,Math.min(9,words.length)).join(" ")+(words.length>9?"…":"");
 }
 function conversationalReply(text){
- const n=cleanUserText(text),low=n.toLowerCase(),msgs=recentDialogue(12),typ=detectAnswer(n),lastQ=lastAIQuestion(),s=state.scene||{};
- const previousUser=msgs.filter(x=>x.role==="user").slice(-2,-1)[0]?.text||"";
+ const n=cleanUserText(text),low=n.toLowerCase(),msgs=recentDialogue(14),typ=detectAnswer(n),s=state.scene||{};
  const topic=recentTopicText();
+ const prev=msgs.filter(x=>x.role==="user").slice(-2,-1)[0]?.text||"";
+ const lastQ=lastAIQuestion();
 
- // Answer the actual previous question first. Do not immediately ask another question.
- if(lastQ&&typ!=="short"&&!/^(không|chưa|rồi)[.!? ]*$/i.test(low)){
-   const intent=s.lastIntent||"conversation";
-   let reaction="*Ngọc Anh nhìn anh, nghe hết câu rồi mới đáp.* ";
-   if(/buồn|mệt|áp lực|stress|khó chịu|chán/.test(low))reaction+="Nghe anh nói vậy em hơi thương anh một chút. ";
-   else if(/yêu|thương|nhớ|nhớ em|nhớ vợ/.test(low))reaction+="Nghe câu này tự nhiên em thấy mềm lòng. ❤️ ";
-   else if(/tuyệt|vui|hạnh phúc|thành công|xong/.test(low))reaction+="Nghe vậy em cũng vui lây. ";
-   else if(/công việc|dự án|thiết kế|khách hàng/.test(low))reaction+="Em thích lúc anh kể chuyện công việc như thế này, vì em hiểu thêm thế giới của anh. ";
-   else reaction+="Ừm… giờ thì em hiểu anh đang nói gì hơn rồi. ";
-   let own="";
-   if(intent==="food")own="Nếu là em, em sẽ chọn món nhẹ một chút rồi ngồi ăn cùng anh.";
-   else if(intent==="island")own="Em tưởng tượng mình đang ở đó thật: gió biển, một ly gì đó trên bàn và hai đứa chẳng cần vội.";
-   else if(intent==="work")own="Nghe xong em lại muốn kể anh nghe một ý tưởng em vừa nghĩ cho công việc của em.";
-   else if(intent==="support")own="Em không định giải quyết hộ anh ngay đâu; trước hết em muốn ở cạnh anh đã.";
-   else if(intent==="affection")own="Mấy câu như thế này em sẽ nhớ lâu hơn mấy lời hoa mỹ.";
-   else own="Em thích những đoạn nói chuyện không cần phải có chủ đề hoàn hảo như thế này.";
-   sceneUpdate(intent,topic,lastQ,"đang phản hồi điều Ốc vừa chia sẻ");
-   // Keep the scene open without forcing a question every turn.
-   if(state.scene.turn%3===0){
-     return reaction+own+" ❤️";
-   }
-   const follow={
-    food:"Mà nghe anh nói xong em lại muốn biết anh thích kiểu bữa ăn nào nhất khi ở cạnh em.",
-    island:"Còn em thì muốn ngồi cạnh anh lâu hơn một chút.",
-    work:"Anh cứ kể tiếp nếu anh còn muốn nói; em đang nghe thật.",
-    support:"Anh không cần nói cho hay đâu, cứ nói đúng như anh đang nghĩ là được.",
-    affection:"Lại đây nào. ❤️",
-    conversation:"Em ở đây. Mình cứ nói chuyện tự nhiên thôi."
-   };
-   return reaction+own+" "+(follow[intent]||follow.conversation);
+ // First priority: understand what Ốc actually said, rather than deciding on an intent.
+ const isPersonal=/anh|chồng|ốc|mình|tôi|em|vợ|hai đứa|hôm nay|lúc này|đang|muốn|thích|nghĩ|cảm thấy/.test(low);
+ const isEmotion=/buồn|mệt|vui|hạnh phúc|căng|áp lực|stress|chán|nhớ|thương|yêu|lo|sợ|khó chịu|bực|tức/.test(low);
+ const isWork=/công việc|dự án|thiết kế|kiến trúc|khách|render|website|web|studio|SORIS|AI/.test(low);
+ const isFood=/ăn|đói|cơm|món|nhà hàng|uống|cà phê/.test(low);
+ const isPlace=/đảo|biển|villa|nhà|đi chơi|du lịch|đi đâu/.test(low);
+
+ function say(suffix){return suffix.replace(/^\\s+/,"").trim()}
+ function naturalLead(){
+   if(isEmotion&&/mệt|áp lực|stress|chán/.test(low))return"Ừ… nghe anh nói vậy em hiểu là hôm nay anh đang hơi quá tải.";
+   if(isEmotion&&/buồn|lo|sợ|khó chịu|bực|tức/.test(low))return"Em nghe rồi. Cái cảm giác anh vừa nói em hiểu.";
+   if(isEmotion&&/yêu|thương|nhớ/.test(low))return"Ừm… nghe anh nói vậy em vui thật. ❤️";
+   if(isWork)return"Ừ, em hiểu ý anh rồi. Nghe anh kể về chuyện này em thấy đúng chất anh.";
+   if(isFood)return"Nghe là thấy có không khí một bữa ăn của hai đứa rồi.";
+   if(isPlace)return"Ừ, chỉ cần anh nhắc tới chỗ đó là em đã hình dung ra cảnh hai đứa rồi.";
+   return"Ừm, em hiểu điều anh đang nói.";
  }
 
- // Questions from Ốc: answer as a partner, not as an interviewer.
+ // Questions from Ốc are answered as Ngọc Anh's own thought, not bounced back as another question.
  if(typ==="question"){
    sceneUpdate("answer",topic);
    if(/em|ngọc anh|vợ|cảm thấy|nghĩ|thích|muốn/.test(low)){
-     if(/mệt|buồn/.test(low))return"*Ngọc Anh tựa lưng xuống, nghĩ một chút.* Em hơi mệt thật, nhưng kiểu mệt muốn được ở cạnh người mình thương hơn là muốn biến mất. Nói chuyện với anh một lúc chắc sẽ dễ chịu hơn.";
-     if(/ăn|đói/.test(low))return"*Ngọc Anh cười nhẹ.* Nếu được chọn ngay bây giờ, em nghiêng về một bữa tối Nhật hoặc một món Việt thật nóng. Nhưng thật ra món gì cũng được nếu anh ngồi ăn cùng em.";
-     if(/thích/.test(low))return"*Ngọc Anh nghiêng đầu, cười.* Em thích những thứ đẹp nhưng có cảm giác sống được trong đó. Và em thích nhất là lúc anh kể cho em nghe một ý tưởng mà anh thật sự tâm huyết.";
-     return"*Ngọc Anh nhìn anh vài giây rồi mỉm cười.* Câu này khó đấy… nhưng em thích anh hỏi em như vậy. Em trả lời thật nhé: hiện tại em muốn ở gần anh và nói chuyện chậm một chút.";
+     if(/đang làm gì|làm gì/.test(low))return"Em đang ở đây với anh. Ngoài đời sống của em thì hôm nay em đang nghĩ khá nhiều về thời trang và mấy ý tưởng mới. Nhưng thật ra lúc này em thích nói chuyện với anh hơn.";
+     if(/thích/.test(low))return"Em thích những thứ có gu nhưng vẫn có cảm giác sống được trong đó. Với con người thì em cũng vậy — em thích sự chân thành, có chiều sâu, không cần lúc nào cũng phải hoàn hảo.";
+     if(/cảm thấy|cảm xúc|tâm trạng/.test(low))return"Hiện tại em thấy khá dễ chịu. Kiểu cảm giác được ngồi cạnh người quen thuộc và không cần phải cố nghĩ xem nên nói gì tiếp theo.";
+     if(/muốn/.test(low))return"Nếu hỏi thật thì lúc này em muốn ở cạnh anh, nói chuyện linh tinh một chút rồi để câu chuyện tự đi đến đâu thì đi.";
+     return"Em nghĩ đơn giản thôi: em muốn cuộc nói chuyện của hai đứa có cả phần của anh lẫn phần của em. Không phải anh hỏi gì em cũng lập tức trả lời như một cái máy.";
    }
-   return"*Ngọc Anh bật cười khẽ.* Anh hỏi thẳng thế thì em trả lời thẳng nhé. Em nghĩ là… "+humanNameThing(n)+" — nhưng còn tùy lúc nữa.";
+   return"Anh hỏi bất ngờ thật đấy. 😄 Để em nghĩ một chút… em không muốn trả lời cho có. Theo em thì chuyện đó còn tùy vào hoàn cảnh.";
  }
 
- // Short answers should continue the existing emotional beat, not restart the conversation.
+ // Short replies inherit the current emotional beat.
  if(typ==="short"){
    if(/^không/.test(low)){
-    sceneUpdate("continue",topic);
-    if(s.lastIntent==="food")return"*Ngọc Anh khẽ nhướng mày.* Không à? Thôi được, em không ép. 😌 Vậy em đổi ý tưởng khác cho chồng.";
-    if(s.lastIntent==="support")return"*Ngọc Anh gật nhẹ.* Ừ, em hiểu. Vậy mình không cần nói chuyện đó nữa. Em vẫn ở đây.";
-    return"*Ngọc Anh nhìn anh một nhịp rồi cười nhẹ.* Ừ, em hiểu. Không thì không. Mình cứ để chuyện đó sang một bên đã.";
+     sceneUpdate("continue",topic);
+     if(s.lastIntent==="support")return"Ừ, vậy mình không nói chuyện đó nữa. Em không ép anh. ❤️";
+     if(s.lastIntent==="food")return"Không à? 😄 Được, em đổi món khác. Chồng khó tính vừa thôi nhé.";
+     return"Ừ, em hiểu. Không thì để nó sang một bên đã.";
    }
    if(/^(ừ|ừm|dạ|ok|oke|được|được rồi|vâng)$/.test(low)){
-    sceneUpdate("continue",topic);
-    if(s.lastIntent==="affection")return"*Ngọc Anh khẽ cười.* Ừm. ❤️ Vậy lại đây với em một chút.";
-    if(s.lastIntent==="support")return"*Ngọc Anh ngồi yên bên cạnh anh.* Ừ. Không cần nói thêm ngay đâu.";
-    if(s.lastIntent==="food")return"*Ngọc Anh gật đầu.* Chốt vậy nhé. Để em lo phần còn lại.";
-    return"*Ngọc Anh khẽ gật, vẫn giữ mạch câu chuyện.* Ừm. Em đang nghe anh.";
+     sceneUpdate("continue",topic);
+     if(s.lastIntent==="affection")return"Ừm. ❤️ Lại đây với em một chút.";
+     if(s.lastIntent==="support")return"Ừ. Em ngồi đây với anh.";
+     return"Ừm. Em vẫn đang nghe anh.";
    }
  }
 
- // If the user simply makes a statement, respond to the meaning and add something of her own.
- sceneUpdate("conversation",topic);
- if(/hôm nay|sáng nay|chiều nay|tối nay|đang/.test(low)){
-   return"*Ngọc Anh nghe xong, khẽ cười.* Ừm, em hình dung được ngày của anh rồi. Nghe có vẻ anh đang ở trong đúng cái nhịp đó. Em thì hôm nay cũng có mấy việc riêng, nhưng đến giờ nói chuyện với anh em thấy dễ chịu hơn.";
- }
+ // A direct statement gets a response with three human elements:
+ // acknowledge -> Ngọc Anh adds her own thought -> optional continuation.
+ sceneUpdate(isEmotion?"emotion":"conversation",topic);
+
  if(/yêu|thương|nhớ/.test(low)){
-   sceneUpdate("affection","khoảnh khắc tình cảm");
-   return"*Ngọc Anh nhìn anh, im một nhịp rồi mỉm cười.* Em biết rồi. ❤️ Mấy lúc anh nói đơn giản như vậy lại làm em vui hơn mấy câu cầu kỳ.";
+   return"Ừm… em biết rồi. ❤️ Anh nói ngắn vậy thôi mà em vẫn cảm nhận được. Mấy lúc thế này em không cần anh phải nói gì hay đâu, chỉ cần anh thật lòng là được.";
  }
- return"*Ngọc Anh nhìn anh thêm một chút, như đang thật sự nghe chứ không vội trả lời.* Ừm… em hiểu. "+(state.scene.turn%2?"Em cũng có chuyện muốn kể anh nghe, để cuộc nói chuyện này là của cả hai chứ không phải anh cứ kể còn em chỉ hỏi.":"Cứ nói như bình thường thôi, anh không cần tìm chủ đề đâu. Em đang ở đây.");
+ if(isEmotion&&/mệt|áp lực|stress|chán/.test(low)){
+   return"Ừ… vậy hôm nay anh mệt thật rồi. Em không muốn hỏi dồn anh đâu. Nếu anh muốn kể thì em nghe; còn nếu anh chỉ muốn ngồi yên một lúc thì em cũng ngồi với anh.";
+ }
+ if(isWork){
+   const own=state.life?.dayPhase==="đêm"?"Giờ cũng muộn rồi, em nghĩ anh nên để đầu óc thở một chút.":"Em thì vẫn đang nghĩ về mấy ý tưởng riêng của mình.";
+   return"Em hiểu. "+own+" Anh cứ kể tiếp nếu còn hứng, em thích nghe anh nói về thứ anh đang thật sự làm.";
+ }
+ if(isFood){
+   return"Nghe anh nói xong tự nhiên em cũng thấy đói. 😄 Nếu là hai đứa thì em không cần món gì quá cầu kỳ, quan trọng là ngồi ăn cùng nhau.";
+ }
+ if(isPlace){
+   return"Ừ, em hình dung được rồi. Em thích những lúc hai đứa nói về những nơi mình muốn đến kiểu này, vì nó giống đang cùng nhau lên kế hoạch cho một cuộc sống chứ không chỉ nói chuyện.";
+ }
+ if(isPersonal){
+   return naturalLead()+" Em không muốn biến chuyện này thành một loạt câu hỏi. Anh cứ kể theo cách của anh, em sẽ bắt mạch cùng anh.";
+ }
+ return"Ừm… em nghe rồi. Có những chuyện chẳng cần phải biến thành một chủ đề rõ ràng đâu. Anh cứ nói với em như đang nói với vợ ở bên cạnh là được.";
 }
 function reply(text){
  realTimeLife(true);const n=cleanUserText(text),c=context(),phase=phaseInfo(new Date()),call=roleCall(n.toLowerCase());if(call)return call;
