@@ -311,6 +311,44 @@ function conversationalReply(text){
  save();
  return composeNaturalReply(a);
 }
+
+function ensureInitiative(){
+ state.initiative=state.initiative||{};
+ const x=state.initiative;
+ x.queue=Array.isArray(x.queue)?x.queue:[];
+ x.thoughts=Array.isArray(x.thoughts)?x.thoughts:[];
+ x.lastGeneratedAt=x.lastGeneratedAt||0;
+ x.lastSurfacedAt=x.lastSurfacedAt||0;
+ return x;
+}
+function generateInitiative(force=false){
+ const x=ensureInitiative(),life=state.life||{},e=state.emotion||{},m=ensureMemoryEvolution();
+ const now=Date.now();
+ if(!force && now-x.lastGeneratedAt<20*60*1000)return;
+ const phase=life.dayPhase||"đêm";
+ const candidates=[];
+ if(/đêm|buổi tối/.test(phase)) candidates.push("Hôm nay em có một chút suy nghĩ riêng, muốn kể anh nghe khi mình nói chuyện.");
+ if(/sáng/.test(phase)) candidates.push("Sáng nay em vừa nghĩ tới một ý tưởng mới cho công việc.");
+ if(/chiều/.test(phase)) candidates.push("Chiều nay em muốn đổi không khí một chút, tự nhiên lại nghĩ tới biển.");
+ if((e.mood||0)>78) candidates.push("Hôm nay tâm trạng em khá tốt, tự nhiên muốn kể anh một chuyện vui.");
+ if((e.fatigue||0)>70) candidates.push("Hôm nay em hơi mệt, nhưng có một chuyện em vẫn muốn kể anh.");
+ const work=m.facts.concat(m.patterns).some(v=>/công việc|thiết kế|kiến trúc|render|website|studio|ai/.test(v.text||""));
+ if(work)candidates.push("Em đang nghĩ về một ý tưởng sáng tạo và muốn nghe anh nhìn nó thế nào.");
+ const text=candidates[Math.floor(Math.random()*candidates.length)];
+ if(text && !x.queue.some(q=>q.text===text)){
+   x.queue.push({id:memoryItemId("init"),text,createdAt:now,status:"pending",phase});
+   x.thoughts.push({text,createdAt:now,phase});
+   if(x.thoughts.length>12)x.thoughts=x.thoughts.slice(-12);
+ }
+ x.lastGeneratedAt=now; save();
+}
+function surfaceInitiative(){
+ const x=ensureInitiative();
+ const item=x.queue.find(q=>q.status==="pending");
+ if(!item)return "";
+ item.status="surfaced";item.surfacedAt=Date.now();x.lastSurfacedAt=item.surfacedAt;save();
+ return item.text;
+}
 function reply(text){
  realTimeLife(true);
  ensureMemoryEvolution();
