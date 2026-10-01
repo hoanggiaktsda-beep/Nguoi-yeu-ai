@@ -19,11 +19,11 @@ AI companion **thuần Việt**: một nhân vật cố định, Character DNA, 
 - Avatar và ảnh nền lưu cục bộ trên thiết bị.
 - Không đặt secret/API key trong GitHub Pages.
 
-## Kiến trúc
+## Kiến trúc hiện tại
 
-GitHub Pages → Cloudflare Worker → Workers AI → D1.
+GitHub Pages → JavaScript trên trình duyệt → Local AI Brain → bộ nhớ/cảm xúc cục bộ.
 
-Cloudflare Workers AI hiện hỗ trợ chạy model serverless trên hạ tầng Cloudflare; D1 là database serverless có thể bind trực tiếp vào Worker.
+Local AI Brain dùng Transformers.js để chạy model ONNX trực tiếp trong trình duyệt; WebGPU được ưu tiên khi thiết bị hỗ trợ, nếu không thì dùng WASM. Transformers.js hỗ trợ chạy model ngay trong browser mà không cần server. citeturn0search3turn0search0
 
 ## Chạy hoàn toàn trên GitHub Pages
 
@@ -41,7 +41,7 @@ Bật website tại GitHub → Settings → Pages → Deploy from branch → `ma
 `API_BASE` được giữ trống để website không phụ thuộc backend bên ngoài.
 
 `api/` được giữ như mã tham khảo/phát triển tương lai, không phải dependency runtime của GitHub Pages.
-## Social API Gateway
+## Social API Gateway (legacy / không phải runtime)
 
 Backend có:
 
@@ -53,9 +53,17 @@ Schema chuẩn hóa:
 
 Collector thật cho TikTok / YouTube / Instagram / Facebook / Google Trends cần được cấu hình bằng API/quyền truy cập hợp lệ. Không scrape private feed và không coi dữ liệu mô phỏng là trend thật.
 
+## Local AI Brain
+
+Model mặc định: `onnx-community/Qwen2.5-0.5B-Instruct`. Model có bản ONNX quantized và hỗ trợ Transformers.js text generation; bản `q4f16` hiện khoảng 483 MB. citeturn1search1turn1search7
+
+Lần đầu người dùng bấm **Khởi động AI Brain**, trình duyệt tải model và lưu cache trên thiết bị. Các lượt chat sau có thể tái sử dụng cache. Đây là model chạy phía client, không phải API inference có khóa bí mật.
+
+WebGPU không có trên mọi trình duyệt/thiết bị; hệ thống tự chuyển sang WASM khi không có WebGPU. citeturn0search0
+
 ## Voice
 
-Voice DNA đã được đặt theo nguyên tắc **AI voice only**. TTS adapter nên được nối ở Worker sau khi chọn provider/model phù hợp và kiểm tra free tier tại thời điểm triển khai. Không lưu hoặc clone giọng người thật.
+Voice DNA dùng AI voice theo nguyên tắc không clone giọng người thật. Phát giọng tiếng Việt hiện dùng Web Speech API `vi-VN` của trình duyệt.
 
 ## Privacy
 
