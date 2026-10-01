@@ -315,6 +315,31 @@ function conversationalReply(text){
  return composeNaturalReply(a);
 }
 
+
+function generateLifeEvent(force=false){
+ const x=state.life||{},s=state.social||{},m=ensureMemoryEvolution(),now=Date.now();
+ const key=new Date().toISOString().slice(0,10), phase=x.dayPhase||"đêm";
+ if(!force && x.lastLifeEventDate===key)return;
+ const templates={
+  "sáng sớm":"Ngọc Anh bắt đầu ngày mới chậm rãi, sắp xếp lại những việc muốn làm hôm nay.",
+  "buổi sáng":"Ngọc Anh tập trung vào công việc và ghi lại một ý tưởng mới.",
+  "buổi trưa":"Ngọc Anh tạm ngắt công việc để nghỉ và nghĩ xem chiều nay muốn làm gì.",
+  "buổi chiều":"Ngọc Anh quay lại với công việc, nhưng trong đầu vẫn giữ một ý tưởng chưa hoàn thiện.",
+  "buổi tối":"Ngọc Anh kết thúc nhịp công việc và muốn dành thời gian cho những chuyện riêng.",
+  "ban đêm":"Ngọc Anh chậm lại, nhìn lại một vài điều trong ngày và để đầu óc nghỉ ngơi."
+ };
+ const event=templates[phase]||templates["ban đêm"];
+ s.events=Array.isArray(s.events)?s.events:[];
+ s.events.push({id:memoryItemId("life"),text:event,date:key,phase,time:now,source:"simulated_life"});
+ if(s.events.length>30)s.events=s.events.slice(-30);
+ x.lastLifeEventDate=key;
+ if(/công việc|thiết kế/.test(event))upsertMemory(m.episodes,"Ngọc Anh đã có một nhịp công việc trong ngày.",["social-life","work"],{confidence:.7,status:"confirmed",source:"life-engine"});
+ save();
+}
+function getInitiativePrompt(){
+ const x=ensureInitiative(), pending=x.queue.filter(q=>q.status==="pending");
+ return pending.length?pending[0].text:"";
+}
 function ensureInitiative(){
  state.initiative=state.initiative||{};
  const x=state.initiative;
