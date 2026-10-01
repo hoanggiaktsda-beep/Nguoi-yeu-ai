@@ -1,4 +1,5 @@
-const KEY="nguoi-yeu-ai-v1";
+const KEY="nguoi-yeu-ai-v2";
+const API_BASE=""; // Dán URL Cloudflare Worker vào đây sau khi deploy.
 const base={setup:false,character:{name:"Linh",age:25,relationship:"lover",face:"Khuôn mặt trái xoan, ánh mắt dịu, nụ cười nhẹ",hair:"Tóc dài tự nhiên, màu nâu đen",body:"Cao 165cm, dáng thanh lịch, cân đối",style:"Modern feminine, thanh lịch",voice:"Nữ, ấm và nhẹ",personality:"Dịu dàng, tinh tế, hài hước, biết lắng nghe, đôi lúc tinh nghịch",speech:"Tiếng Việt tự nhiên, ngắn gọn, thân mật"},user:{name:"",likes:"",dislikes:""},memories:[],messages:[]};
 let state=load();
 function load(){try{return Object.assign(structuredClone(base),JSON.parse(localStorage.getItem(KEY)||"{}"))}catch(e){return structuredClone(base)}}
@@ -36,7 +37,29 @@ else if(/hôm nay|đang làm gì/.test(low)){answer=context()?"Em vẫn nhớ nh
 else{answer="Em nghe đây. "+(context()?"Em vẫn nhớ: "+context()+". ":"")+"Anh kể tiếp cho em nhé.";action="*Cô nhìn anh chăm chú, chờ anh nói tiếp.*"}
 return {answer:answer,action:action}
 }
-function send(e){e.preventDefault();var input=document.getElementById("input"),text=input.value.trim();if(!text)return;state.messages.push({role:"user",text:text,time:Date.now()});extractMemory(text);var r=response(text);state.messages.push({role:"ai",text:r.answer,action:r.action,time:Date.now()});save();render()}
+async function send(e){
+e.preventDefault();
+var input=document.getElementById("input"),text=input.value.trim();
+if(!text)return;
+state.messages.push({role:"user",text:text,time:Date.now()});
+extractMemory(text);
+input.value="";save();render();
+if(API_BASE){
+try{
+var r=await fetch(API_BASE+"/api/chat",{method:"POST",headers:{"Content-Type":"application/json","X-Session-Id":getSessionId()},body:JSON.stringify({session_id:getSessionId(),message:text,character:state.character,relationship:{stage:state.character.relationship}})});
+var d=await r.json();
+if(!r.ok)throw new Error(d.error||"API error");
+state.messages.push({role:"ai",text:d.reply,action:"*Cô nhìn anh dịu dàng, giữ đúng tính cách và mối quan hệ của hai người.*",time:Date.now()});
+if(Array.isArray(d.memories))state.memories=d.memories.map(function(m){return {id:m.id,text:m.memory_key+": "+m.value,type:m.type,importance:m.importance,created:m.updated_at}});
+save();render();
+}catch(err){
+state.messages.push({role:"ai",text:"Em đang gặp lỗi kết nối AI. Kiểm tra API trong phần cấu hình nhé.",action:"*Cô khẽ mỉm cười và chờ anh kiểm tra kết nối.*",time:Date.now()});save();render();
+}
+}else{
+var r=response(text);state.messages.push({role:"ai",text:r.answer,action:r.action,time:Date.now()});save();render();
+}
+}
+function getSessionId(){var k="nguoi-yeu-ai-session";var x=localStorage.getItem(k);if(!x){x=crypto.randomUUID();localStorage.setItem(k,x)}return x}
 function openMemories(){
 document.body.insertAdjacentHTML("beforeend",'<div class="modal" id="modal"><div class="card"><h2>🧠 Ký ức của em</h2><p class="muted">Thông tin được nhận diện từ cuộc trò chuyện.</p>'+(state.memories.length?state.memories.map(function(m){return '<div class="memory"><b>'+esc(m.text)+'</b><span class="muted">'+esc(m.type)+" · "+new Date(m.created).toLocaleDateString("vi-VN")+'</span><button style="float:right" onclick="delMemory('+m.id+')">Xóa</button></div>'}).join(""):'<p class="muted">Chưa có ký ức nào.</p>')+'<div class="actions"><button onclick="closeModal()">Đóng</button></div></div></div>')
 }
