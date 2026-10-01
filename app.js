@@ -467,5 +467,5 @@ generateLifeEvent();
 generateInitiative(true);
 render();
 refreshTrends();
-setInterval(()=>{realTimeLife();render()},60000);
+setInterval(()=>{realTimeLife();emotionRecoveryTick();generateLifeEvent();generateInitiative();render()},60000);
 setInterval(()=>{refreshTrends()},30*60*1000);
