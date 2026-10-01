@@ -35,3 +35,5 @@ html,body{height:100%;overflow:hidden}.app{display:block;height:100dvh}
 .grid{grid-template-columns:1fr}.field.full{grid-column:auto}.card{padding:18px;border-radius:20px}.modal{padding:10px}
 }
 @media(min-width:801px){.mobile-tools{display:none}}
+
+.state-card .state-group{margin-top:14px}.state-group>small{display:block;color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px}.state-row{margin:8px 0}.state-row>div:first-child{display:flex;justify-content:space-between;font-size:12px}.state-row em{font-style:normal;color:#d9cbd8}.state-row>small{font-size:10px;color:var(--muted)}.state-bar{height:5px;background:#0d0b0f;border-radius:99px;overflow:hidden;margin:5px 0}.state-bar i{display:block;height:100%;background:var(--accent);border-radius:99px}.social-card .trend{margin-top:12px;padding:10px;border:1px solid var(--line);border-radius:12px;background:#120f14aa}.trend strong,.trend span,.trend small{display:block}.trend span{font-size:12px;line-height:1.45;margin-top:4px;color:#d4cbd4}.trend small{margin-top:6px;color:var(--muted);font-size:10px}
