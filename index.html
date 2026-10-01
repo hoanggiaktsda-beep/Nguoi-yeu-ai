@@ -6,11 +6,45 @@
 <meta name="theme-color" content="#120f13">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<link rel="icon" href="logo.svg"><meta name="description" content="Người yêu AI — AI companion thuần Việt, một nhân vật, ký ức dài hạn và đời sống riêng."><title>NGƯỜI YÊU AI</title>
-<link rel="stylesheet" href="styles.css?v=20261001-2">
+<link rel="icon" href="logo.svg">
+<meta name="description" content="Người yêu AI — AI companion thuần Việt, một nhân vật, ký ức dài hạn và đời sống riêng.">
+<title>NGƯỜI YÊU AI</title>
+<link rel="stylesheet" href="styles.css?v=20261001-3">
+<style>
+html,body{margin:0;min-height:100%;background:#120f13}
+#boot{min-height:100dvh;display:grid;place-items:center;background:radial-gradient(circle at 50% 20%,#241b27,#120f13 60%);color:#f7f2f6;font-family:system-ui,-apple-system,sans-serif}
+.boot-card{width:min(420px,calc(100% - 40px));padding:28px;border:1px solid #3a303d;border-radius:24px;background:#1b171d;text-align:center;box-shadow:0 20px 60px #0008}
+.boot-logo{width:58px;height:58px;margin:auto auto 14px;display:block}
+.boot-card h1{font-size:20px;margin:0 0 8px}.boot-card p{color:#aaa;margin:0}.boot-error{display:none;margin-top:16px;padding:12px;border-radius:12px;background:#2a171c;color:#ffb8c0;font-size:12px;text-align:left;word-break:break-word}
+</style>
 </head>
 <body>
+<div id="boot">
+  <div class="boot-card">
+    <img class="boot-logo" src="logo.svg" alt="">
+    <h1>NGƯỜI YÊU AI</h1>
+    <p id="boot-status">Đang khởi động…</p>
+    <div id="boot-error" class="boot-error"></div>
+  </div>
+</div>
 <div id="app"></div>
-<script src="app.js?v=20261001-2"></script>
+<script>
+(function(){
+  var boot=document.getElementById("boot"),status=document.getElementById("boot-status"),err=document.getElementById("boot-error");
+  window.addEventListener("error",function(e){
+    if(boot)boot.style.display="grid";
+    if(status)status.textContent="Không thể khởi động ứng dụng";
+    if(err){err.style.display="block";err.textContent=(e.message||"JavaScript error")+" — dòng "+(e.lineno||"?");}
+  });
+  window.addEventListener("unhandledrejection",function(e){
+    if(boot)boot.style.display="grid";
+    if(status)status.textContent="Ứng dụng gặp lỗi khi khởi động";
+    if(err){err.style.display="block";err.textContent=String(e.reason||"Promise error");}
+  });
+  window.__hideBoot=function(){if(boot)boot.style.display="none"};
+})();
+</script>
+<script src="app.js?v=20261001-3"></script>
+<script>if(document.getElementById("app").innerHTML.trim() && window.__hideBoot)window.__hideBoot();</script>
 </body>
 </html>
