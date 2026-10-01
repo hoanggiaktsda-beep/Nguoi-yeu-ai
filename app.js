@@ -316,6 +316,27 @@ function conversationalReply(text){
 }
 
 
+
+function applyLifeEventEmotion(eventText){
+ const e=state.emotion||{},r=state.relationshipDNA||{};
+ const t=(eventText||"").toLowerCase();
+ const delta={mood:0,energy:0,stress:0,fatigue:0,happiness:0,affection:0};
+ if(/căng|áp lực|deadline|nặng|mệt|công việc/.test(t)){delta.stress+=5;delta.fatigue+=6;delta.energy-=4;delta.mood-=2}
+ if(/ý tưởng|sáng tạo|vui|hứng|thú vị/.test(t)){delta.mood+=5;delta.happiness+=5;delta.energy+=3;delta.stress-=2}
+ if(/nghỉ|thư giãn|chậm lại|ngủ/.test(t)){delta.fatigue-=5;delta.stress-=4;delta.energy+=4;delta.mood+=2}
+ if(/chồng|anh|hai đứa|tình cảm/.test(t)){delta.affection+=2;delta.happiness+=3}
+ Object.keys(delta).forEach(k=>{if(typeof e[k]==="number")e[k]=Math.max(0,Math.min(100,e[k]+delta[k]))});
+ if(delta.affection>0&&r.bond!=null)r.bond=Math.max(0,Math.min(100,r.bond+.4));
+ state.emotion=e;state.relationshipDNA=r;return delta;
+}
+function emotionRecoveryTick(){
+ const e=state.emotion||{};
+ if(e.stress>0)e.stress=Math.max(0,e.stress-.15);
+ if(e.fatigue>0)e.fatigue=Math.max(0,e.fatigue-.08);
+ if(e.energy<100)e.energy=Math.min(100,e.energy+.05);
+ if(e.mood<70)e.mood=Math.min(100,e.mood+.04);
+ if(e.happiness<70)e.happiness=Math.min(100,e.happiness+.03);
+}
 function generateLifeEvent(force=false){
  const x=state.life||{},s=state.social||{},m=ensureMemoryEvolution(),now=Date.now();
  const key=new Date().toISOString().slice(0,10), phase=x.dayPhase||"đêm";
