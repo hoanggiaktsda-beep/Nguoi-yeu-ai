@@ -25,23 +25,22 @@ GitHub Pages → Cloudflare Worker → Workers AI → D1.
 
 Cloudflare Workers AI hiện hỗ trợ chạy model serverless trên hạ tầng Cloudflare; D1 là database serverless có thể bind trực tiếp vào Worker.
 
-## Kích hoạt AI thật
+## Chạy hoàn toàn trên GitHub Pages
 
-1. Tạo Cloudflare D1 database tên `nguoi-yeu-ai`.
-2. Thay `REPLACE_WITH_D1_ID` trong `api/wrangler.toml`.
-3. Trong thư mục `api`, chạy:
+Phiên bản runtime hiện tại được thiết kế để chạy trực tiếp trên GitHub Pages:
+- Không cần Cloudflare Worker.
+- Không cần D1.
+- Không cần server riêng.
+- Character DNA, Relationship DNA, Emotion Engine, Memory và Social World chạy phía trình duyệt.
+- Dữ liệu cá nhân lưu trên thiết bị bằng localStorage/IndexedDB.
+- Voice sử dụng Web Speech API với ngôn ngữ `vi-VN`.
+- Không đặt API key bí mật trong repository.
 
-```bash
-npx wrangler login
-npx wrangler d1 execute nguoi-yeu-ai --remote --file=./schema.sql
-npx wrangler deploy
-```
+Bật website tại GitHub → Settings → Pages → Deploy from branch → `main` → `/ (root)`.
 
-4. Lấy Worker URL dạng `https://...workers.dev`.
-5. Mở website → **⚙ Hệ thống AI** → dán Worker URL → Lưu.
+`API_BASE` được giữ trống để website không phụ thuộc backend bên ngoài.
 
-GitHub Pages chỉ phục vụ frontend tĩnh; Worker mới là nơi chạy AI và truy cập D1.
-
+`api/` được giữ như mã tham khảo/phát triển tương lai, không phải dependency runtime của GitHub Pages.
 ## Social API Gateway
 
 Backend có:
