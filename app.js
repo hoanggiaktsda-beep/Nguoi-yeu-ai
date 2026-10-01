@@ -297,6 +297,8 @@ function composeNaturalReply(a){
 }
 function conversationalReply(text){
  const a=analyzeConversation(text);
+ const initiative=surfaceInitiative();
+ if(initiative && !a.q && !a.yes && a.speechAct==="sharing") a.initiative=initiative;
  const mem=memoryContextForDialogue(text);
  if(mem)a.memoryContext=mem;
  const m=ensureMemoryEvolution();
