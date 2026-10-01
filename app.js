@@ -301,6 +301,9 @@ function conversationalReply(text){
  const a=analyzeConversation(text);
  const mem=memoryContextForDialogue(text);
  if(mem)a.memoryContext=mem;
+ const m=ensureMemoryEvolution();
+ const prefs=m.patterns.concat(m.understandings).filter(x=>x.tags?.includes("communication")||x.tags?.includes("preference"));
+ if(prefs.length)a.memoryPreference=prefs.slice(-4).map(x=>x.text).join(" ");
  sceneUpdate(a.intent,a.topic,"",a.continuity?a.topic:"");
  state.scene.lastMeaning=a.speechAct;
  state.scene.lastInput=a.n;
