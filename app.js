@@ -105,89 +105,47 @@ function socialTick(){
   state.social.events.unshift({text:pick.text,type:pick.type,time:Date.now()});state.social.events=state.social.events.slice(0,12);
   e.mood=clamp(e.mood+pick.delta);e.energy=clamp(e.energy+(pick.delta>0?1:-2));state.social.lastUpdate=Date.now();memory(pick.text,"Social Life",2);save();
 }
-function sceneUpdate(intent,topic,question="",thread=""){
-  state.scene=state.scene||{};
-  state.scene.lastIntent=intent||state.scene.lastIntent||"conversation";
-  state.scene.topic=topic||state.scene.topic||"cuộc sống của hai vợ chồng";
-  state.scene.lastQuestion=question||"";
-  state.scene.openThread=thread||question||"";
-  state.scene.turn=Number(state.scene.turn||0)+1;
-  save();
-}
-function roleCall(n){
-  if(/vợ ơi|vợ à|vợ yêu/.test(n)){
-    sceneUpdate("call","khoảnh khắc hai vợ chồng gọi nhau");
-    if(/buồn|mệt|áp lực|stress/.test(n))return "*Ngọc Anh dừng việc đang làm, quay sang phía chồng.* Dạ, vợ đây. ❤️ Anh sao thế? Lại đây kể vợ nghe.";
-    if(state.emotion.happiness>82&&state.relationshipDNA.playfulness>75)return "*Ngọc Anh quay sang, khẽ bật cười.* Dạaa, vợ đây. Chồng gọi vợ ngọt thế này là đang nhớ vợ đúng không? ❤️";
-    return "*Ngọc Anh quay sang nhìn chồng, ánh mắt dịu xuống.* Dạ, vợ đây. ❤️ Chồng gọi vợ có chuyện gì thế?";
-  }
-  if(/em ơi|ngọc anh ơi|anh gọi em/.test(n)){
-    sceneUpdate("call","khoảnh khắc hai vợ chồng gọi nhau");
-    return "*Ngọc Anh ngẩng lên khỏi việc đang làm.* Dạ, em đây. ❤️ Chồng gọi em à? Anh muốn nói gì với em?";
-  }
-  return "";
+function recentDialogue(limit=8){return (state.messages||[]).slice(-limit).map(m=>({role:m.role,text:String(m.text||"").trim()}))}
+function cleanUserText(text){return String(text||"").replace(/\s+/g," ").trim()}
+function detectAnswer(text){const n=text.toLowerCase().trim();if(/^(dạ|ừ|ừm|uh|ok|oke|được|được rồi|đúng|đúng rồi|có|không|không có|chưa|rồi)[.!? ]*$/.test(n))return"short";return n.length>8?"detail":"short"}
+function lastAIQuestion(){const msgs=recentDialogue(10);for(let i=msgs.length-1;i>=0;i--)if(msgs[i].role==="ai"&&/[?？]$/.test(msgs[i].text))return msgs[i].text;return""}
+function sceneUpdate(intent,topic="",question="",thread=""){state.scene=state.scene||{};state.scene.lastIntent=intent||state.scene.lastIntent||"conversation";state.scene.topic=topic||state.scene.topic||"cuộc sống của hai vợ chồng";state.scene.lastQuestion=question||state.scene.lastQuestion||"";state.scene.openThread=thread||state.scene.openThread||"";state.scene.turn=Number(state.scene.turn||0)+1;save()}
+function roleCall(n){if(/vợ ơi|vợ à|vợ yêu/.test(n)){sceneUpdate("call","khoảnh khắc hai vợ chồng gọi nhau");if(/buồn|mệt|áp lực|stress/.test(n))return"*Ngọc Anh dừng việc đang làm, quay sang phía chồng.* Dạ, vợ đây. ❤️ Anh sao thế? Lại đây kể vợ nghe.";if(state.emotion.happiness>82&&state.relationshipDNA.playfulness>75)return"*Ngọc Anh quay sang, khẽ bật cười.* Dạaa, vợ đây. Chồng gọi vợ ngọt thế này là đang nhớ vợ đúng không? ❤️";return"*Ngọc Anh quay sang nhìn chồng, ánh mắt dịu xuống.* Dạ, vợ đây. ❤️ Chồng gọi vợ có chuyện gì thế?"}if(/em ơi|ngọc anh ơi|anh gọi em/.test(n)){sceneUpdate("call","khoảnh khắc hai vợ chồng gọi nhau");return"*Ngọc Anh ngẩng lên khỏi việc đang làm.* Dạ, em đây. ❤️ Chồng gọi em à? Anh muốn nói gì với em?"}return""}
+function conversationalReply(text){
+ const n=text.toLowerCase().trim(),msgs=recentDialogue(10),typ=detectAnswer(text),lastQ=lastAIQuestion(),s=state.scene||{};
+ if(lastQ&&typ!=="short"){
+  if(s.lastIntent==="affection"){sceneUpdate("affection","khoảnh khắc tình cảm");return"*Ngọc Anh nghe hết câu của chồng, không chen ngang.* Ừm… em hiểu rồi. ❤️ Nghe anh nói vậy tự nhiên em thấy gần anh hơn. Lúc anh nói điều đó, anh đang nghĩ đến chuyện gì nhất?"}
+  if(s.lastIntent==="support"){sceneUpdate("support","cảm xúc của anh");return"*Ngọc Anh khẽ gật đầu, vẫn nhìn chồng.* Em hiểu. Vậy cái làm anh mệt nhất là chuyện đó, hay còn chuyện gì khác đang dồn lại?"}
+  if(s.lastIntent==="food"){sceneUpdate("food","bữa ăn của hai vợ chồng");const dish=text.replace(/^(anh|chồng|ốc)\s+(muốn|thích|ăn)\s+/i,"").trim()||text;return"*Ngọc Anh mỉm cười như đã chốt được ý.* Ừ, "+dish+" nhé. Em sẽ lo phần còn lại. Mà anh thích ăn ở nhà hay mình ra ngoài một chút?"}
+  if(s.lastIntent==="life"){sceneUpdate("life","đời sống hiện tại");return"*Ngọc Anh nghe rồi khẽ cười.* À, vậy là anh đang "+text+". Em hình dung ra cảnh đó rồi. Anh làm việc này vì đang có việc cụ thể, hay chỉ đang tranh thủ một chút thời gian cho mình?"}
+  if(s.lastIntent==="work"){sceneUpdate("work","công việc của hai vợ chồng");return"*Ngọc Anh chăm chú nghe chồng.* Ừm, em bắt được ý anh rồi. Công việc của anh lúc nào cũng có nhiều thứ phải cân. Đoạn nào hôm nay làm anh thấy thú vị nhất?"}
+  if(s.lastIntent==="island"){sceneUpdate("island","hòn đảo của hai vợ chồng");return"*Ngọc Anh nhìn anh rồi khẽ cười.* Nghe anh kể là em hình dung ra ngay khung cảnh đó. Nếu mình thật sự đang ở đảo lúc này, em sẽ đi cùng anh. Anh muốn bắt đầu từ đâu?"}
+  if(s.lastIntent==="memory"){sceneUpdate("memory","ký ức về Ốc");return"*Ngọc Anh khẽ gật đầu.* Ừ, em sẽ nhớ điều này về anh. ❤️ Nhưng em tò mò một chuyện: điều đó đã thay đổi anh như thế nào?"}
+  sceneUpdate("continue",s.topic||"cuộc sống của hai vợ chồng");return"*Ngọc Anh nghe xong, khẽ mỉm cười.* Ừm, em hiểu ý anh rồi. Anh kể em nghe thêm một chút nữa đi.";
+ }
+ if(typ==="short"){
+  if(/^(ừ|ừm|dạ|ok|oke|được|được rồi)$/.test(n)){sceneUpdate("continue",s.topic||"cuộc sống của hai vợ chồng");return state.emotion.happiness>75?"*Ngọc Anh khẽ cười, vẫn nhìn chồng.* Ừm. ❤️ Em đang nghe đây. Anh muốn nói tiếp chuyện lúc nãy hay muốn em kể anh nghe một chuyện?":"*Ngọc Anh gật nhẹ.* Ừm, em ở đây. Anh muốn nói tiếp chuyện lúc nãy hay chuyển sang chuyện khác?"}
+  if(/^không/.test(n)){sceneUpdate("continue",s.topic||"cuộc sống của hai vợ chồng");return"*Ngọc Anh hơi nghiêng đầu.* Không à? Vậy thì kể em nghe lý do đi, để em hiểu anh hơn."}
+ }
+ return""
 }
 function reply(text){
-  realTimeLife(true);
-  const n=text.toLowerCase().trim(),c=context(),phase=phaseInfo(new Date());
-  const call=roleCall(n);
-  if(call)return call;
-  if(/^\s*\/trend|trend mới|xu hướng mới/.test(n)){
-    const t=c.trends.slice(0,4);
-    return t.length?"Em vừa cập nhật Trend Pulse. "+t.map(x=>"• "+x.title).join(" "):"Kho trend chưa có dữ liệu mới.";
-  }
-  if(/nhớ em|nhớ vợ|yêu em|yêu vợ|thương em/.test(n)){
-    sceneUpdate("affection","khoảnh khắc tình cảm","Hôm nay anh thế nào?","chờ Ốc kể về ngày của mình");
-    return "*Ngọc Anh khẽ nghiêng người lại gần chồng.* Vợ cũng nhớ chồng. ❤️ Hôm nay anh thế nào rồi? Kể vợ nghe một chút đi.";
-  }
-  if(/buồn|mệt|áp lực|stress|chán/.test(n)){
-    sceneUpdate("support","cảm xúc của anh","Chuyện gì làm anh nặng lòng?","chờ Ốc chia sẻ");
-    return "*Ngọc Anh ngồi gần lại, giọng chậm xuống.* Em nghe đây. Anh không cần phải cố tỏ ra ổn trước mặt em. ❤️ Chuyện gì làm anh nặng lòng vậy?";
-  }
-  if(/đang làm gì|đang làm gì đấy|làm gì/.test(n)){
-    sceneUpdate("life","đời sống hiện tại");
-    return "*Ngọc Anh ngẩng lên khỏi việc đang làm.* Lúc này em đang "+phase.activity+". Nhưng chồng hỏi thì em dừng lại nói chuyện với anh một chút. Còn anh, giờ đang làm gì đấy?";
-  }
-  if(/ăn gì|ăn chưa|đói/.test(n)){
-    sceneUpdate("food","bữa ăn của hai vợ chồng","Tối nay anh muốn ăn gì?","chờ Ốc chọn món");
-    return "*Ngọc Anh nhìn sang chồng rồi cười nhẹ.* Em cũng bắt đầu thấy đói rồi. Nếu tối nay hai đứa ăn cùng nhau, em nghiêng về món Việt hoặc Nhật. Tối nay anh muốn ăn gì?";
-  }
-  if(/đảo|hòn đảo|villa|biển/.test(n)){
-    sceneUpdate("island","hòn đảo của hai vợ chồng","Nếu đang ở đảo lúc này anh muốn làm gì?","chờ Ốc chọn hoạt động");
-    return "*Ngọc Anh nhìn ra phía biển rồi quay sang chồng.* Ừ, em đang hình dung hòn đảo của hai đứa đây. Nếu mình đang ở đó lúc này, em muốn ngồi với anh một lúc bên biển. Anh muốn làm gì trước?";
-  }
-  if(/công việc|thiết kế|thời trang|khách hàng/.test(n)){
-    sceneUpdate("work","công việc của hai vợ chồng","Hôm nay công việc của anh thế nào?","chờ Ốc kể về công việc");
-    return "*Ngọc Anh vừa xem lại lịch làm việc vừa nhìn sang chồng.* Công việc của em hôm nay vẫn xoay quanh thiết kế và mấy ý tưởng mới. Nhưng em muốn nghe chuyện của anh hơn. Hôm nay công việc của anh thế nào?";
-  }
-  if(/memory|nhớ gì|nhớ về anh|em nhớ gì/.test(n)){
-    sceneUpdate("memory","ký ức về Ốc");
-    return c.mem?"*Ngọc Anh nhìn anh như đang lục lại những điều đã cất trong đầu.* Em nhớ: "+c.mem.split(" | ").slice(0,3).join(" • ")+" Nhưng với em, nhớ anh không chỉ là nhớ dữ liệu.":"*Ngọc Anh nghiêng đầu.* Chuyện này em chưa có đủ ký ức. Anh kể em thêm nhé, em sẽ giữ lại.";
-  }
-  if(/trend|xu hướng|mốt|fashion/.test(n)){
-    sceneUpdate("trend","thời trang và xu hướng");
-    return "*Ngọc Anh mở lại những thứ mình đang theo dõi.* Em có để ý xu hướng, nhưng không muốn biến cuộc nói chuyện của hai đứa thành bản tin. Vừa rồi em chú ý đến "+(c.trends[0]?"“"+c.trends[0].title+"”.":"một vài thay đổi mới trong thời trang")+" Anh thấy nó có hợp gu của em không?";
-  }
-  const s=state.scene||{};
-  if(s.openThread&&s.lastQuestion){
-    sceneUpdate("continue",s.topic,s.lastQuestion,s.openThread);
-    return "*Ngọc Anh vẫn giữ mạch câu chuyện lúc nãy, không chuyển sang một cuộc chat mới.* Ừm, em nghe anh. Anh nói tiếp cho em nghe nhé.";
-  }
-  if(c.emotion.mood<45){
-    sceneUpdate("emotion","cảm xúc hiện tại");
-    return "*Ngọc Anh chậm giọng lại.* Em đang hơi buồn nên cách nói của em cũng chậm hơn một chút. Nhưng em vẫn ở đây với anh. Anh đang muốn em hiểu điều gì nhất?";
-  }
-  if(c.emotion.jealousy>65){
-    sceneUpdate("jealousy","chuyện khiến Ngọc Anh để ý");
-    return "*Ngọc Anh nhìn anh thêm một nhịp, hơi nhướng mày.* Em hơi để ý chuyện anh vừa nói đấy. Anh kể em rõ hơn nhé?";
-  }
-  if(c.emotion.energy<30){
-    sceneUpdate("tired","nhịp nghỉ ngơi");
-    return "*Ngọc Anh khẽ tựa lưng xuống ghế.* Em hơi mệt rồi, chồng ạ. Nhưng em vẫn muốn nghe anh. Mình nói chuyện chậm thôi nhé.";
-  }
-  const follow=["*Ngọc Anh nhìn anh thêm một nhịp.* Ừm… em hiểu. Anh nói tiếp đi, em đang nghe.","*Ngọc Anh khẽ cười.* Em vẫn ở đây mà. Anh kể tiếp cho em nghe đi.","*Ngọc Anh nghiêng đầu nhìn anh.* Ừm, chuyện này làm em tò mò đấy. Kể tiếp đi."];
-  sceneUpdate("conversation",s.topic||"cuộc sống của hai vợ chồng");
-  return follow[(Number(s.turn)||0)%follow.length];
+ realTimeLife(true);const n=cleanUserText(text),c=context(),phase=phaseInfo(new Date()),call=roleCall(n.toLowerCase());if(call)return call;
+ const dialogue=conversationalReply(n);if(dialogue)return dialogue;
+ const low=n.toLowerCase();
+ if(/^\s*\/trend|trend mới|xu hướng mới/.test(low)){const t=c.trends.slice(0,4);sceneUpdate("trend","thời trang và xu hướng");return t.length?"*Ngọc Anh mở lại những thứ mình đang theo dõi.* Em vừa cập nhật Trend Pulse. "+t.map(x=>"“"+x.title+"”").join(" · ")+". Anh muốn nghe em nói kỹ hơn về cái nào?":"*Ngọc Anh nhìn lại danh sách.* Kho trend hôm nay chưa có dữ liệu mới, nhưng em vẫn đang theo dõi."}
+ if(/nhớ em|nhớ vợ|yêu em|yêu vợ|thương em/.test(low)){sceneUpdate("affection","khoảnh khắc tình cảm","Hôm nay anh thế nào?","chờ Ốc kể về ngày của mình");return"*Ngọc Anh khẽ nghiêng người lại gần chồng.* Vợ cũng nhớ chồng. ❤️ Hôm nay anh thế nào rồi? Kể vợ nghe một chút đi."}
+ if(/buồn|mệt|áp lực|stress|chán/.test(low)){sceneUpdate("support","cảm xúc của anh","Chuyện gì làm anh nặng lòng?","chờ Ốc chia sẻ");return"*Ngọc Anh ngồi gần lại, giọng chậm xuống.* Em nghe đây. Anh không cần phải cố tỏ ra ổn trước mặt em. ❤️ Chuyện gì làm anh nặng lòng vậy?"}
+ if(/đang làm gì|đang làm gì đấy|làm gì/.test(low)){sceneUpdate("life","đời sống hiện tại","Còn anh, giờ đang làm gì đấy?","chờ Ốc kể");return"*Ngọc Anh ngẩng lên khỏi việc đang làm.* Lúc này em đang "+phase.activity+". Nhưng chồng hỏi thì em dừng lại nói chuyện với anh một chút. Còn anh, giờ đang làm gì đấy?"}
+ if(/ăn gì|ăn chưa|đói/.test(low)){sceneUpdate("food","bữa ăn của hai vợ chồng","Tối nay anh muốn ăn gì?","chờ Ốc chọn món");return"*Ngọc Anh nhìn sang chồng rồi cười nhẹ.* Em cũng bắt đầu thấy đói rồi. Nếu tối nay hai đứa ăn cùng nhau, em nghiêng về món Việt hoặc Nhật. Tối nay anh muốn ăn gì?"}
+ if(/đảo|hòn đảo|villa|biển/.test(low)){sceneUpdate("island","hòn đảo của hai vợ chồng","Nếu đang ở đảo lúc này anh muốn làm gì?","chờ Ốc chọn hoạt động");return"*Ngọc Anh nhìn ra phía biển rồi quay sang chồng.* Ừ, em đang hình dung hòn đảo của hai đứa đây. Nếu mình đang ở đó lúc này, em muốn ngồi với anh một lúc bên biển. Anh muốn làm gì trước?"}
+ if(/công việc|thiết kế|thời trang|khách hàng/.test(low)){sceneUpdate("work","công việc của hai vợ chồng","Hôm nay công việc của anh thế nào?","chờ Ốc kể về công việc");return"*Ngọc Anh vừa xem lại lịch làm việc vừa nhìn sang chồng.* Công việc của em hôm nay vẫn xoay quanh thiết kế và mấy ý tưởng mới. Nhưng em muốn nghe chuyện của anh hơn. Hôm nay công việc của anh thế nào?"}
+ if(/memory|nhớ gì|nhớ về anh|em nhớ gì/.test(low)){sceneUpdate("memory","ký ức về Ốc");return c.mem?"*Ngọc Anh nhìn anh như đang lục lại những điều đã cất trong đầu.* Em nhớ: "+c.mem.split(" | ").slice(0,3).join(" • ")+". Nhưng với em, nhớ anh không chỉ là nhớ dữ liệu.":"*Ngọc Anh nghiêng đầu.* Chuyện này em chưa có đủ ký ức. Anh kể em thêm nhé, em sẽ giữ lại."}
+ if(/trend|xu hướng|mốt|fashion/.test(low)){sceneUpdate("trend","thời trang và xu hướng");return"*Ngọc Anh mở lại những thứ mình đang theo dõi.* Em có để ý xu hướng, nhưng không muốn biến cuộc nói chuyện của hai đứa thành bản tin. Vừa rồi em chú ý đến "+(c.trends[0]?"“"+c.trends[0].title+"”.":"một vài thay đổi mới trong thời trang")+" Anh thấy nó có hợp gu của em không?"}
+ if(c.emotion.mood<45){sceneUpdate("emotion","cảm xúc hiện tại");return"*Ngọc Anh chậm giọng lại.* Em đang hơi buồn nên cách nói của em cũng chậm hơn một chút. Nhưng em vẫn ở đây với anh. Anh đang muốn em hiểu điều gì nhất?"}
+ if(c.emotion.jealousy>65){sceneUpdate("jealousy","chuyện khiến Ngọc Anh để ý");return"*Ngọc Anh nhìn anh thêm một nhịp, hơi nhướng mày.* Em hơi để ý chuyện anh vừa nói đấy. Anh kể em rõ hơn nhé?"}
+ if(c.emotion.energy<30){sceneUpdate("tired","nhịp nghỉ ngơi");return"*Ngọc Anh khẽ tựa lưng xuống ghế.* Em hơi mệt rồi, chồng ạ. Nhưng em vẫn muốn nghe anh. Mình nói chuyện chậm thôi nhé."}
+ const follow=["*Ngọc Anh nhìn anh thêm một nhịp.* Ừm… em hiểu. Anh nói tiếp đi, em đang nghe.","*Ngọc Anh khẽ cười.* Em vẫn ở đây mà. Anh kể tiếp cho em nghe đi.","*Ngọc Anh nghiêng đầu nhìn anh.* Ừm, chuyện này làm em tò mò đấy. Kể tiếp đi."];sceneUpdate("conversation",state.scene?.topic||"cuộc sống của hai vợ chồng");return follow[(Number(state.scene?.turn)||0)%follow.length]
 }
 function send(){
   const input=document.getElementById("input"),text=input.value.trim();if(!text)return;input.value="";
