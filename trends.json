@@ -1,9 +1,60 @@
 {
-  "updatedAt":"2026-10-01T00:00:00Z",
-  "source":"GitHub Trend Pack",
-  "items":[
-    {"title":"Quiet luxury và chất liệu tactile","summary":"Ngọc Anh đang để ý cách dùng chất liệu, bề mặt và phom dáng tinh tế thay vì phụ thuộc logo."},
-    {"title":"Cá nhân hóa AI trong sáng tạo","summary":"Các workflow sáng tạo đang dịch chuyển về phía cá nhân hóa, character và ngữ cảnh thay vì prompt rời rạc."},
-    {"title":"Không gian sống giàu trải nghiệm","summary":"Thiết kế đang chú trọng cảm giác, ánh sáng, vật liệu và trải nghiệm sống hơn là chỉ hình thức."}
+  "updatedAt": "2026-10-01T18:36:32.673521+00:00",
+  "source": "Public RSS via GitHub Actions",
+  "items": [
+    {
+      "title": "Vietnamese fashion goes viral in China - vietnamnews.vn",
+      "summary": "Trend Thời trang được cập nhật từ nguồn tin công khai.",
+      "source": "https://news.google.com/rss/articles/CBMijgFBVV95cUxPZFY5cjlva0pSLVRhLTZ0YWlfNmFwYjJyNm5JMklqX3BYZjE0RUo1cmdrX2ZZeXNrWjZwRkkwdUlXM2J6dFBnQ2hqZ3dvelBKdHRrV1NIZmdvZjh2a1dRNGZEWkg3TXN5YUw0cGVXdTI0OG40c1o4N0JBSVNfQkk5alJHZ0JGY1FyYVlOUlRB?oc=5",
+      "category": "Thời trang"
+    },
+    {
+      "title": "Blackpink wears outfits from a Vietnamese fashion house in their new music video. - Vietnam.vn",
+      "summary": "Trend Thời trang được cập nhật từ nguồn tin công khai.",
+      "source": "https://news.google.com/rss/articles/CBMifkFVX3lxTE9XM1hmRk5kZFhNSy10MFoyT04tTkFYZFo1c2pER0w1RmthWDFsMDlRdktSdUM1WkFXLVhyTm9GZWJUNWRRMXcxdEtxLXljdi1wVzdjTEtUdlZwOW9TYmFpZzBCT3FSQ2VYSUFyUnBfN1ZiOVFvUnZRaVl6d0trZw?oc=5",
+      "category": "Thời trang"
+    },
+    {
+      "title": "Actress Guli Nazha sparks controversy with her no-bra fashion trend. - Vietnam.vn",
+      "summary": "Trend Thời trang được cập nhật từ nguồn tin công khai.",
+      "source": "https://news.google.com/rss/articles/CBMijAFBVV95cUxOT25WdEpScEdnbTBnUVdsVE8wV2t0WUljVXBqOVgzbjFqYjFCVU1EeWFkNWJNblFmX0JqSVR6OXAzajVIRGN0Rmo2VFF5UjdHZk56TGZfcWZURWk4MlpSX3lZYjhtTXAyZFgyTzRvQ2RKNzhNM3hBZXhJRUxrempVRXBrOUtTb3NMek1JSg?oc=5",
+      "category": "Thời trang"
+    },
+    {
+      "title": "Over 250 architects receive updates on AI application trends in interior design. - Vietnam.vn",
+      "summary": "Trend Kiến trúc được cập nhật từ nguồn tin công khai.",
+      "source": "https://news.google.com/rss/articles/CBMiogFBVV95cUxQS3BHWGotV3VlaVhLRl94OFR3ZFZFRlJyVHpjLXpBa3hwSU80cU8tMkk4QnFmTndKWkxqWGxJOFVETm9XVm9qYkFGZFVEMEU2Z2lzWTBUWE1XV0ZiWjJDUDdsblROQ3lmMjR4OC1GMHJRSWhaYS1jQ1l4Z3h2ZUFpalNTa1JETUt2SUpOZXpNNGd1c0p6Z2xaLUh1NHpaaG1tMFE?oc=5",
+      "category": "Kiến trúc"
+    },
+    {
+      "title": "When materials and architecture are geared towards the living experience. - Vietnam.vn",
+      "summary": "Trend Kiến trúc được cập nhật từ nguồn tin công khai.",
+      "source": "https://news.google.com/rss/articles/CBMihAFBVV95cUxPY0RWY19aM195ZGhYMHV3VFRCOE9MOG83OFhfOVdlVjVSbkRPZUJQcldMY1FzLTNPLUJRb3ZFTTk1Qmc2Y1RVQ0M0WVF1dzdHaFpvcWJtaWdOMTZlTHFKajJaVHZJVmE1NkJfY3lHUFJTdFNOTFZpWUlxaDlvZV9XMFBNSjE?oc=5",
+      "category": "Kiến trúc"
+    },
+    {
+      "title": "Personalizing living spaces: When doors become a focal point in modern architecture. - Vietnam.vn",
+      "summary": "Trend Kiến trúc được cập nhật từ nguồn tin công khai.",
+      "source": "https://news.google.com/rss/articles/CBMirgFBVV95cUxQem80VnN5MWpOVlBEaG5KWl81eHppNU0wUm5jWnFHX1d2NHdyY09vNzUtZmcwMHNwWDNOX0tWbFNuRHFzcWlvLTFxUnVhMzNCU250TXRUUm5BWXJVazE0MDNqWS1HUXVtVTFxNS1PU0pTcjJTcXJ3NmVkUjdNU2MxSFQ4M0g1RXBYelo5dVZ2XzJHZHB3RlJXbUVmYVh1aV9rdTdNZUlZTnV0RzZFOFE?oc=5",
+      "category": "Kiến trúc"
+    },
+    {
+      "title": "What is AI doing to Asian literature and art? - Vietnam.vn",
+      "summary": "Trend Công nghệ được cập nhật từ nguồn tin công khai.",
+      "source": "https://news.google.com/rss/articles/CBMiekFVX3lxTE1VdVdKQ25rNmN5aGZDdko3TlpxTldDaGxETHpuS2hxU1RCLV81WDdVSEVuRVJsR1MycGpJMWdfR0tmaDd6cWNlWFhITG1VUmxpeDd2enE3NWlmTHg2cnRnRDdUZzFDZ0kydUFqdmNhT1dzN18wOUtvZC13?oc=5",
+      "category": "Công nghệ"
+    },
+    {
+      "title": "These are the outstanding books nominated for the 2026 Science, Technology, Innovation and Digital Transformation Book Award. - Vietnam.vn",
+      "summary": "Trend Công nghệ được cập nhật từ nguồn tin công khai.",
+      "source": "https://news.google.com/rss/articles/CBMi2wFBVV95cUxNYlJ1S19rLWVzQURpUTE0VGV6dWFIS1Ftb0REWm5BMWprM0IzQWJXNFk4MUNKZkRVNVhEMlExamJ4SjM4TFRaaE5tSGZYWVlBR21HaDNiamxlLXhtSWVqYUF0THRJMW5aUzZqQjVrNlJjaXBXX0FDbXc3aG5rekZfRGlxQ2t2QTR0SGtPT2YyRnBmS1lpOVZ2YURwYmJHUzg2RWNybERINEJaMjVxdzZuTmtkT3NxMnVnMzVUemJnRkNpR2h6OVpjZGphQS11WEJDVVBJcHktOE1OZE0?oc=5",
+      "category": "Công nghệ"
+    },
+    {
+      "title": "AI enters creative stage, but human depth remains irreplaceable - vietnamnews.vn",
+      "summary": "Trend Công nghệ được cập nhật từ nguồn tin công khai.",
+      "source": "https://news.google.com/rss/articles/CBMirgFBVV95cUxNU1pia3JicjM3azY1ODVjTGV5NWE0MmVGODA0MF9hd21yTUlHQlpPdWFDdkd1WU1MQ3VvNllnVkNxVVRWMEFLQlI5bkVHTldScmlfXzFVR2oyczJUWUZLZDNoRkZKb1BZNEVLSGVoSXBOR2lMRWwwWXlFcTNKaWltc0tpNWxCRUNvbXdnZmNtTndmd2RyMHpyS3JibXEwbm9yUUtBUnBubl9IbHliZkE?oc=5",
+      "category": "Công nghệ"
+    }
   ]
 }
