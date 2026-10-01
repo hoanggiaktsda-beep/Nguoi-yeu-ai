@@ -352,6 +352,7 @@ function surfaceInitiative(){
 function reply(text){
  realTimeLife(true);
  ensureMemoryEvolution();
+ generateInitiative();
  const incoming=cleanUserText(text);
  evolveMemory(incoming,"");const n=cleanUserText(text),c=context(),phase=phaseInfo(new Date()),call=roleCall(n.toLowerCase());if(call)return call;
  const dialogue=conversationalReply(n);if(dialogue)return dialogue;
