@@ -1,74 +1,120 @@
 # NGƯỜI YÊU AI 🇻🇳
 
-AI companion **thuần Việt**: một nhân vật cố định, Character DNA, Relationship DNA, ký ức dài hạn, trạng thái mô phỏng, Social Life và nền tảng AI voice.
+AI companion thuần Việt, chạy ưu tiên trực tiếp trên GitHub Pages: một nhân vật cố định, Character DNA bất biến, ký ức dài hạn, cảm xúc, quan hệ và giọng nói tiếng Việt.
 
-## Đã tích hợp
+## Mục tiêu
 
-- Mobile riêng cho điện thoại và layout 3 cột cho PC.
-- Logo chung `logo.svg`.
-- Character DNA: lý lịch, quê quán, nghề nghiệp, học vấn, khuôn mặt, tóc, vóc dáng, phong cách, Voice DNA, tính cách, giá trị và sở thích.
-- Relationship Stage: mới làm quen / đang tìm hiểu / người yêu / vợ-chồng.
-- Relationship & Intimacy DNA: lãng mạn, flirty, âu yếm, táo bạo, tinh nghịch, đam mê, ngại ngùng, chủ động, riêng tư.
-- Phần intimacy chỉ điều chỉnh biểu đạt tình cảm trưởng thành; hệ thống không tạo nội dung tình dục đồ họa.
-- Vietnamese-first: tiếng Việt mặc định, vùng giọng Bắc/Trung/Nam, xưng hô theo quan hệ.
-- Emotion Engine: đói, mệt, sức khỏe, mong muốn, sức hút, ghen, tâm trạng, năng lượng, tình cảm, tin tưởng.
-- Memory Engine: profile / preference / episode / relationship / important; có thể xóa.
-- Social Life Engine: Trend Scanner + Social Memory + Personal Interest; hiện fallback mô phỏng ở frontend, backend đã có bảng và API trend Việt Nam.
-- Character Brain: server kết hợp Character DNA + Relationship + Emotion + Memory + Social context.
-- AI Voice DNA: chỉ định hướng AI voice; không nhận/clone giọng người thật.
-- Avatar và ảnh nền lưu cục bộ trên thiết bị.
-- Không đặt secret/API key trong GitHub Pages.
+**Một cô ấy — một Character DNA — một dòng ký ức — một quan hệ liên tục.**
 
-## Kiến trúc hiện tại
+Ốc chỉ cần mở website, tạo hồ sơ cô ấy một lần rồi bắt đầu trò chuyện.
 
-GitHub Pages → JavaScript trên trình duyệt → Local AI Brain → bộ nhớ/cảm xúc cục bộ.
+## Phiên bản GitHub Free
 
-Local AI Brain dùng Transformers.js để chạy model ONNX trực tiếp trong trình duyệt; WebGPU được ưu tiên khi thiết bị hỗ trợ, nếu không thì dùng WASM. Transformers.js hỗ trợ chạy model ngay trong browser mà không cần server.
+Runtime chính không phụ thuộc server riêng:
 
-## Chạy hoàn toàn trên GitHub Pages
+- GitHub Pages: hosting miễn phí.
+- HTML/CSS/JavaScript: toàn bộ giao diện và logic.
+- localStorage: hồ sơ, ký ức, cảm xúc và cài đặt trên thiết bị.
+- Web Speech API: đọc câu trả lời bằng giọng tiếng Việt của trình duyệt.
+- AI Brain cục bộ: **tùy chọn**, chỉ tải khi người dùng bấm khởi động.
+- Không cần Cloudflare Worker, D1, server riêng hoặc API key.
+- Không tự động tải model ~500 MB khi mở website.
+- Nếu chưa bật AI Brain, website vẫn trò chuyện ngay bằng chế độ phản hồi nhẹ.
 
-Phiên bản runtime hiện tại được thiết kế để chạy trực tiếp trên GitHub Pages:
-- Không cần Cloudflare Worker.
-- Không cần D1.
-- Không cần server riêng.
-- Character DNA, Relationship DNA, Emotion Engine, Memory và Social World chạy phía trình duyệt.
-- Dữ liệu cá nhân lưu trên thiết bị bằng localStorage/IndexedDB.
-- Voice sử dụng Web Speech API với ngôn ngữ `vi-VN`.
-- Không đặt API key bí mật trong repository.
+## Character DNA
 
-Bật website tại GitHub → Settings → Pages → Deploy from branch → `main` → `/ (root)`.
+Hồ sơ cô ấy được khai báo một lần gồm:
 
-`API_BASE` được giữ trống để website không phụ thuộc backend bên ngoài.
+- Tên, tuổi, ngày sinh, quê quán, nghề nghiệp, học vấn.
+- Gia đình, giá trị sống, ước mơ, nỗi sợ, nguyên tắc.
+- Khuôn mặt, tóc, vóc dáng, phong cách, trang phục.
+- Tính cách, cách suy nghĩ, cách quan tâm, cách làm hòa.
+- Sở thích, đồ ăn, âm nhạc, phim, hoạt động và thói quen.
+- Giọng nói, vùng miền, cách xưng hô.
+- Quan hệ ban đầu: Bạn bè, Bạn thân, Mới làm quen, Đang tìm hiểu, Người yêu, Vợ/chồng, Bạn đồng hành hoặc Tùy chỉnh.
 
-`api/` được giữ như mã tham khảo/phát triển tương lai, không phải dependency runtime của GitHub Pages.
-## Social API Gateway (legacy / không phải runtime)
+Sau khi bấm **Lưu hồ sơ**, Character DNA được khóa. Memory chỉ được bổ sung trải nghiệm và không được tự ý sửa ngoại hình, tính cách hay quá khứ đã khai báo.
 
-Backend có:
+## Hồ sơ của Ốc
 
-`GET /api/social/trends`
+Phần người dùng được giữ gọn:
 
-Schema chuẩn hóa:
+- Tên
+- Tuổi
+- Tính cách
+- Chiều cao
+- Cân nặng
+- Tài sản / điều kiện tài chính
+- Công việc
+- Sở thích
 
-`id, source, title, url, category, region=VN, language=vi, score, published_at, fetched_at, summary, tags`
+## Memory Engine
 
-Collector thật cho TikTok / YouTube / Instagram / Facebook / Google Trends cần được cấu hình bằng API/quyền truy cập hợp lệ. Không scrape private feed và không coi dữ liệu mô phỏng là trend thật.
+Hệ thống ghi nhớ có chọn lọc thay vì lưu mọi câu nói:
 
-## Local AI Brain
+- profile
+- preference
+- episode
+- relationship
+- important
 
-Model mặc định: `onnx-community/Qwen2.5-0.5B-Instruct`. Model có bản ONNX quantized và hỗ trợ Transformers.js text generation; bản `q4f16` hiện khoảng 483 MB.
+Ốc có thể mở **🧠 Ký ức của em** để xem và xóa từng ký ức.
 
-Lần đầu người dùng bấm **Khởi động AI Brain**, trình duyệt tải model và lưu cache trên thiết bị. Các lượt chat sau có thể tái sử dụng cache. Đây là model chạy phía client, không phải API inference có khóa bí mật.
+## Emotion Engine
 
-WebGPU không có trên mọi trình duyệt/thiết bị; hệ thống tự chuyển sang WASM khi không có WebGPU.
+Mô phỏng:
+
+- đói
+- mệt
+- sức khỏe
+- năng lượng
+- tâm trạng
+- tình cảm
+- tin tưởng
+- ghen
+- mong muốn
+- sức hút
+
+Các trạng thái thay đổi theo cuộc trò chuyện nhưng không làm thay đổi Character DNA.
+
+## AI Brain tùy chọn
+
+Model mặc định:
+
+`onnx-community/Qwen2.5-0.5B-Instruct`
+
+Transformers.js chạy model trực tiếp trong trình duyệt, ưu tiên WebGPU và tự chuyển sang WASM nếu cần.
+
+**Quan trọng:** website không tải model khi mở lần đầu. Muốn dùng AI Brain mạnh hơn, vào **⚙ Hệ thống AI → 🚀 Khởi động AI Brain**.
+
+Model được cache trên thiết bị sau lần tải đầu tiên.
 
 ## Voice
 
-Voice DNA dùng AI voice theo nguyên tắc không clone giọng người thật. Phát giọng tiếng Việt hiện dùng Web Speech API `vi-VN` của trình duyệt.
+Giọng nói hiện dùng Web Speech API với `vi-VN`. Đây là giọng tổng hợp của thiết bị/trình duyệt, không clone giọng người thật.
 
-## Privacy
+## GitHub Pages
 
-Đây hiện là personal app. Trước khi mở rộng nhiều người dùng cần thêm authentication, rate limiting, abuse protection, data export/delete, kiểm soát CORS và chính sách lưu dữ liệu.
+Repository:
 
-## Nguyên tắc sản phẩm
+https://github.com/hoanggiaktsda-beep/Nguoi-yeu-ai
 
-**Một cô ấy — một Character DNA — một dòng ký ức — một quan hệ liên tục — một thế giới sống bên ngoài cuộc trò chuyện.**
+Website dự kiến:
+
+https://hoanggiaktsda-beep.github.io/Nguoi-yeu-ai/
+
+Nếu GitHub Pages chưa tự triển khai, vào:
+
+**Settings → Pages → Build and deployment → Source → GitHub Actions**
+
+Sau đó vào **Actions → Deploy to GitHub Pages** để chạy workflow.
+
+## Quyền riêng tư
+
+Dữ liệu cá nhân hiện được lưu cục bộ trên thiết bị bằng localStorage. Ảnh đại diện và ảnh nền cũng lưu cục bộ.
+
+Backend trong thư mục `api/` chỉ là phần tham khảo/phát triển tương lai và **không phải dependency của runtime GitHub Pages hiện tại**.
+
+## Nguyên tắc
+
+**Một cô ấy. Một DNA bất biến. Một dòng ký ức. Một mối quan hệ liên tục. Và một thế giới riêng chỉ lớn dần theo thời gian.**
