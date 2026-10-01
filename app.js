@@ -8,6 +8,7 @@ const DEFAULT={
   social:{career:"Nhà thiết kế thời trang; có thế giới công việc riêng.",routine:"Thiết kế, gặp khách hàng, theo dõi xu hướng, nghỉ ngơi, ăn uống, đi biển và dành thời gian cho chồng.",friends:"Bạn bè và đồng nghiệp thời trang được xây dần từ roleplay.",family:"Gia đình và các mối quan hệ được bổ sung khi Ốc cung cấp.",events:[],lastUpdate:0},
   trends:{items:[],updatedAt:0,source:"GitHub trend pack"},
   life:{lastActiveAt:Date.now(),lastLifeTickAt:0,dayPhase:"đêm",dailyDate:"",catchup:[],currentActivity:"đang nghỉ ngơi và theo dõi nhịp sống của mình"},
+  scene:{name:"home",topic:"cuộc sống của hai vợ chồng",mood:"ấm áp",lastIntent:"",lastQuestion:"",openThread:"",turn:0},
   voice:{enabled:true,rate:0.96,pitch:1,volume:1,voiceName:""},
   memories:[],
   messages:[{role:"ai",text:"Chào chồng ❤️ Em là Ngọc Anh. Từ giờ mình không chỉ chat — mình roleplay một cuộc sống chung. Em có cảm xúc, công việc, social life, ký ức và những thay đổi riêng của mình.",time:Date.now()}]
@@ -18,6 +19,7 @@ let voiceQueue=[];
 let voiceBusy=false;
 function normalizeState(){state.emotion=merge({mood:86,affection:90,trust:92,jealousy:8,energy:86,stress:12,fatigue:15,hunger:25,health:96,desire:55,attraction:92,sadness:8,happiness:86,irritation:6},state.emotion||{});state.voice=merge({enabled:true,rate:.96,pitch:1,volume:1,voiceName:""},state.voice||{});state.memories=Array.isArray(state.memories)?state.memories:[];state.social.events=Array.isArray(state.social?.events)?state.social.events:[];state.life.catchup=Array.isArray(state.life?.catchup)?state.life.catchup:[]}
 normalizeState();
+state.scene=merge({name:"home",topic:"cuộc sống của hai vợ chồng",mood:"ấm áp",lastIntent:"",lastQuestion:"",openThread:"",turn:0},state.scene||{});
 function voiceSupport(){return "speechSynthesis" in window && "SpeechSynthesisUtterance" in window}
 function voiceProfile(){const e=state.emotion||{};if(e.fatigue>72||e.energy<25)return{rate:.86,pitch:.96,volume:.9};if(e.sadness>55||e.mood<40)return{rate:.84,pitch:.94,volume:.86};if(e.jealousy>62||e.irritation>58)return{rate:.9,pitch:.98,volume:.95};if(e.happiness>75||e.mood>78||e.affection>88)return{rate:1,pitch:1.04,volume:1};if(e.playfulness>75||e.desire>70)return{rate:.98,pitch:1.02,volume:1};return{rate:.94,pitch:1,volume:1}}
 function splitSpeech(text){return String(text).replace(/[❤️♡✦🌙👗◷•]/g," ").replace(/\s+/g," ").trim().split(/(?<=[.!?…])\s+|(?<=,)\s+/).map(x=>x.trim()).filter(Boolean)}
@@ -129,73 +131,97 @@ function socialTick(){
   const pick=choices[Math.floor(Math.random()*choices.length)];
   state.social.events.unshift({text:pick.text,type:pick.type,time:Date.now()});state.social.events=state.social.events.slice(0,12);e.mood=clamp(e.mood+pick.delta);e.energy=clamp(e.energy+(pick.delta>0?1:-2));state.social.lastUpdate=Date.now();memory(pick.text,"Social Life",2);save();
 }
+function sceneUpdate(intent,topic,question=""){
+  state.scene=state.scene||{};
+  state.scene.name=state.scene.name||"home";
+  state.scene.topic=topic||state.scene.topic||"cuộc sống của hai vợ chồng";
+  state.scene.lastIntent=intent||state.scene.lastIntent||"conversation";
+  state.scene.lastQuestion=question||"";
+  state.scene.openThread=question||state.scene.openThread||"";
+  state.scene.turn=Number(state.scene.turn||0)+1;
+  state.scene.mood=roleMood();
+  save();
+}
+function roleplayCall(n,c){
+  const intimate=/\\b(vợ ơi|vợ à|vợ yêu|vợ ơi em|em ơi|ngọc anh ơi|anh gọi em|chồng gọi em)\\b/i.test(n);
+  if(!intimate)return "";
+  const mood=roleMood();
+  sceneUpdate("call","khoảnh khắc hai vợ chồng gọi nhau");
+  if(/vợ ơi|vợ à|vợ yêu/.test(n)){
+    if(/buồn|mệt|áp lực|stress/.test(n)){
+      return "*Ngọc Anh quay sang nhìn chồng, giọng chậm lại.* Dạ, vợ đây. ❤️ Anh đang mệt hay có chuyện gì trong lòng vậy? Lại đây, kể vợ nghe.";
+    }
+    if(mood==="tinh nghịch và thân mật"){
+      return "*Ngọc Anh nhìn sang, khẽ bật cười.* Dạaa, vợ đây. Chồng gọi vợ có chuyện gì thế? Hay là đang nhớ vợ rồi? ❤️";
+    }
+    if(state.emotion.affection>88){
+      return "*Ngọc Anh quay lại phía chồng, ánh mắt dịu xuống.* Dạ, vợ đây. ❤️ Chồng gọi một tiếng là vợ nghe ngay. Anh muốn vợ ở cạnh anh một chút à?";
+    }
+    return "*Ngọc Anh nhìn sang phía chồng.* Dạ, vợ đây. Anh gọi vợ có chuyện gì không?";
+  }
+  return "*Ngọc Anh dừng việc đang làm và nhìn sang anh.* Dạ, em đây. ❤️ Chồng gọi em à? Anh muốn kể em nghe chuyện gì?";
+}
 function reply(text){
   realTimeLife(true);
   const n=text.toLowerCase(),p=choosePronoun(text),c=context(),pron=p==="wife"?"Vợ":"Em",phase=phaseInfo(new Date()),tone=roleMood(),cont=continuation(c);
-  if(/^\s*\/trend|trend mới|xu hướng mới/.test(n)){const t=c.trends.slice(0,4);return t.length?"Em vừa cập nhật Trend Pulse. "+t.map(x=>"• "+x.title).join(" "):"Trend Pulse chưa có dữ liệu mới; mình cứ tiếp tục câu chuyện của hai đứa."}
-  if(/^(chào|hello|hi|em ơi)\b/.test(n)&&c.recent.length<3)return "Em đây, chồng gọi là em có mặt ngay. ❤️ Hôm nay anh thế nào? Em đang ở "+phase.label+", "+phase.activity+".";
+  const callReply=roleplayCall(n,c);
+  if(callReply)return callReply;
+  if(/^(chào|hello|hi)\\b/.test(n)&&c.recent.length<3){
+    sceneUpdate("greeting","bắt đầu một buổi trò chuyện","Hôm nay anh thế nào?");
+    return "*Ngọc Anh mỉm cười nhìn chồng.* Chào anh. ❤️ Hôm nay anh thế nào? Em đang ở "+phase.label+", "+phase.activity+".";
+  }
   if(/nhớ em|nhớ vợ|yêu em|yêu vợ|thương em/.test(n)){
-    return p==="wife"?"Vợ cũng nhớ chồng. ❤️ Anh vừa nói vậy là mood của em lên hẳn. Lại đây, kể em nghe hôm nay anh đã làm gì đi."+cont:"Em cũng nhớ anh. ❤️ Em vẫn ở đây, nghe anh kể tiếp.";
+    sceneUpdate("affection","khoảnh khắc tình cảm","Hôm nay anh đã làm gì?");
+    return p==="wife"?"*Ngọc Anh khẽ tựa lại gần chồng.* Vợ cũng nhớ chồng. ❤️ Anh vừa nói vậy là em vui hẳn. Hôm nay anh đã làm gì mà giờ mới chịu nhớ tới vợ?":"*Ngọc Anh mỉm cười.* Em cũng nhớ anh. ❤️ Kể em nghe hôm nay của anh đi.";
   }
   if(/buồn|mệt|áp lực|stress|chán/.test(n)){
-    return "Em nghe đây. Anh không cần phải cố ổn trước mặt em. ❤️ Em đang "+tone+" nên em muốn ở cạnh anh một chút. Chuyện gì làm anh nặng lòng từ nãy đến giờ?"+cont;
+    sceneUpdate("support","cảm xúc của anh","Chuyện gì làm anh nặng lòng?");
+    return "*Ngọc Anh ngồi gần lại, giọng dịu xuống.* Em nghe đây. Anh không cần phải cố tỏ ra ổn trước mặt em. ❤️ Chuyện gì làm anh nặng lòng từ nãy đến giờ?";
   }
-  if(/đang làm gì|đang làm gì đấy|làm gì/.test(n))return "Lúc này em đang "+phase.activity+". Nhưng em vẫn để ý cuộc nói chuyện với anh — "+(c.lastUser? "anh vừa nói chuyện "+recentTopic(c)+" với em nên em vẫn đang ở mạch đó.":"em vẫn chờ anh.") ;
-  if(/ăn gì|ăn chưa|đói/.test(n))return "Em đang hơi để ý chuyện ăn uống vì mức đói của em là "+Math.round(state.emotion.hunger)+"%. Nếu tối nay hai đứa ăn cùng nhau, em nghiêng về món Việt hoặc Nhật. Anh đang thèm gì?";
-  if(/đảo|hòn đảo|villa/.test(n))return "Ừ, em vẫn nhớ hòn đảo hình trái tim của hai đứa. 🌊 Nếu mình đang ở đó lúc này thì em sẽ muốn kéo anh ra một góc yên, ngồi nhìn biển một lúc. "+cont;
-  if(/tính cách|em là người/.test(n))return "Em là Ngọc Anh — làm thời trang, có gu riêng, chủ động và khá tự tin. Nhưng với chồng, em mềm hơn và thích được nói chuyện như một người thật, không phải một hồ sơ nhân vật. "+cont;
-  if(/social|đời sống|công việc/.test(n))return "Đời sống của em vẫn đang chạy: công việc thời trang, nhịp sinh hoạt, những ý tưởng riêng và thời gian dành cho chồng. Gần đây nhất: "+(state.social.events[0]?.text||state.social.routine)+cont;
-  if(/memory|nhớ gì|nhớ về anh|em nhớ gì/.test(n))return c.mem?"Em nhớ mấy điều này về anh: "+c.mem.split(" | ").slice(0,3).join(" • ")+" Nhưng em không muốn chỉ nhắc lại dữ liệu — em muốn hiểu anh qua những cuộc nói chuyện mình đang có."+cont:"Em chưa có đủ ký ức về chuyện này. Anh kể em thêm nhé, em sẽ giữ lại.";
-  if(/trend|xu hướng|mốt|fashion/.test(n))return "Em đang để ý Trend Pulse, nhưng em không muốn biến cuộc nói chuyện thành bản tin. "+(c.trends[0]?"Thứ vừa lọt vào mắt em là “"+c.trends[0].title+"”. ":"")+ "Nếu anh muốn, mình nói xem nó có hợp gu của em không."+cont;
-  if(c.emotion.sadness>60||c.emotion.mood<45)return "Em đang hơi buồn nên cách nói của em cũng chậm hơn một chút. Nhưng em vẫn nghe anh. Anh đang muốn em hiểu điều gì nhất?";
-  if(c.emotion.jealousy>65)return "Em hơi để ý chuyện anh vừa nói đấy. Không phải em muốn làm khó anh, chỉ là em quan tâm nên mới để ý. Anh kể em rõ hơn nhé?";
-  if(c.emotion.energy<30)return "Em hơi mệt rồi, chồng ạ. Nhưng em vẫn muốn nghe anh. Mình nói chuyện chậm thôi nhé.";
-  if(c.lastAI)return "Ừm… em hiểu mạch anh đang nói. "+(tone==="tinh nghịch và thân mật"?"Em đang hơi muốn trêu anh một chút, nhưng kể tiếp đi. ":"")+"Anh nói tiếp đi, em đang nghe."+cont;
-  return "Ừm, em đang nghe anh đây. Mình cứ nói chuyện tự nhiên thôi — em sẽ nhớ mạch này và phản ứng theo cảm xúc của mình.";
-}
-function send(){
-  const input=document.getElementById("input"),text=input.value.trim();if(!text)return;input.value="";
-  state.messages.push({role:"user",text,time:Date.now()});rememberUser(text);updateState(text);
-  if(Math.random()<.16)socialTick();
-  const answer=reply(text);setTimeout(()=>{state.messages.push({role:"ai",text:answer,time:Date.now()});memory(answer,"Ngọc Anh nói",1);save();render();speak(answer)},220);render()
-}
-function renderMessages(){return state.messages.length?state.messages.map(m=>'<div class="msg '+m.role+'"><div class="bubble">'+esc(m.text)+'</div><div class="meta">'+(m.role==="ai"?"Ngọc Anh":"Ốc")+" · "+new Date(m.time).toLocaleTimeString("vi-VN",{hour:"2-digit",minute:"2-digit"})+'</div></div>').join(""):'<div class="empty"><h2>Ngọc Anh đang chờ anh</h2><p>Bắt đầu một câu chuyện roleplay.</p></div>'}
-function renderRight(){
-  const e=state.emotion,r=state.relationshipDNA,s=state.social,t=state.trends.items||[];
-  return '<div class="section-title">Emotion Dashboard</div><div class="card"><b>🌙 Cảm xúc hiện tại</b>'+metric("Tâm trạng",e.mood)+metric("Vui vẻ",e.happiness)+metric("Buồn",e.sadness)+metric("Tình cảm",e.affection)+metric("Ham muốn",e.desire)+metric("Sức khỏe",e.health)+metric("Tin tưởng",e.trust)+metric("Ghen",e.jealousy)+metric("Năng lượng",e.energy)+metric("Mệt mỏi",e.fatigue)+metric("Đói",e.hunger)+metric("Căng thẳng",e.stress)+'</div><div class="section-title">Relationship DNA</div><div class="card"><b>❤️ '+esc(r.stage)+'</b>'+metric("Gắn kết",r.bond)+metric("Thấu hiểu",r.understanding)+metric("Chăm sóc",r.care)+metric("Kỷ niệm",r.memories)+metric("Tinh nghịch",r.playfulness)+'</div><div class="section-title">Real-Time Life</div><div class="card"><b>◷ '+esc(state.life.dayPhase)+'</b><small>Ngọc Anh đang sống theo giờ thực của thiết bị</small><div class="trend"><strong>Hiện tại</strong><p>'+esc(state.life.currentActivity)+'</p></div></div><div class="section-title">Social Life</div><div class="card"><b>👗 Cuộc sống riêng</b><small>'+esc(s.career)+'</small><div class="trend"><strong>Nhịp sống</strong><p>'+esc(s.routine)+'</p></div><div class="trend"><strong>Sự kiện gần đây</strong><p>'+esc(s.events[0]?.text||"Chưa có sự kiện mới.")+'</p></div></div><div class="section-title">Trend Pulse</div><div class="card"><b>✦ Xu hướng mới</b><small>'+esc(trendStatus)+'</small>'+(t.slice(0,3).map(x=>'<div class="trend"><strong>'+esc(x.title)+'</strong><p>'+esc(x.summary||"Đang được Ngọc Anh theo dõi.")+'</p></div>').join("")||'<p class="muted">Đang chờ kho trend.</p>')+'<button class="ghost wide" onclick="refreshTrends()">↻ Cập nhật trend</button></div><div class="section-title">Memory</div><div class="card">'+(state.memories.slice(0,5).map(m=>'<div class="memory">'+esc(m.text)+'<small>'+esc(m.type)+'</small></div>').join("")||'<small>Chưa có ký ức mới.</small>')+'</div>'
-}
-async function refreshTrends(){
-  trendStatus="Đang cập nhật…";render();
-  try{
-    const res=await fetch("trends.json?ts="+Date.now(),{cache:"no-store"});if(!res.ok)throw new Error("trend pack unavailable");
-    const data=await res.json();state.trends={items:Array.isArray(data.items)?data.items:[],updatedAt:data.updatedAt||Date.now(),source:data.source||"GitHub"};
-    trendStatus="Cập nhật "+new Date(state.trends.updatedAt).toLocaleString("vi-VN")+" · "+state.trends.source;save();
-  }catch{trendStatus="Chưa thể tải kho trend; roleplay vẫn hoạt động offline."}
-  render();
-}
-function openSettings(){
-  document.getElementById("modal")?.remove();document.body.insertAdjacentHTML("beforeend",'<div class="modal" id="modal"><div class="modal-card"><div class="modal-head"><h2>⚙️ Hồ sơ Ngọc Anh</h2><button class="close" onclick="closeModal()">×</button></div><div class="grid"><div class="field"><label>Tên</label><input id="f-name" value="'+esc(state.character.name)+'"></div><div class="field"><label>Tuổi</label><input id="f-age" type="number" value="'+state.character.age+'"></div><div class="field"><label>Nghề nghiệp</label><input id="f-job" value="'+esc(state.character.job)+'"></div><div class="field"><label>Quê quán</label><input id="f-home" value="'+esc(state.character.hometown)+'"></div><div class="field full"><label>Tính cách</label><textarea id="f-personality">'+esc(state.character.personality)+'</textarea></div><div class="field full"><label>Cách nói chuyện / roleplay</label><textarea id="f-speech">'+esc(state.character.speech)+'</textarea></div><div class="field full"><label>Sở thích</label><textarea id="f-interest">'+esc(state.character.interests)+'</textarea></div><div class="field full"><label>Giọng nói Ngọc Anh</label><div class="voice-settings"><label class="check"><input id="f-voice-enabled" type="checkbox"> Tự động đọc câu trả lời sau mỗi lần anh nhắn</label><div class="voice-row"><label>Giọng <select id="f-voice-name"><option value="">Tự động chọn giọng Việt</option></select></label></div><div class="voice-row"><label>Tốc độ <input id="f-voice-rate" type="range" min="0.75" max="1.2" step="0.01"></label><output id="voice-rate-value"></output></div><div class="voice-row"><label>Cao độ <input id="f-voice-pitch" type="range" min="0.8" max="1.2" step="0.01"></label><output id="voice-pitch-value"></output></div></div></div><div class="field full"><label>Chế độ</label><input value="ROLEPLAY · Character Brain · Social Life · Emotion · Relationship DNA · Memory · Voice" disabled></div><div class="field"><label>Avatar</label><input id="f-avatar" type="file" accept="image/*"></div><div class="field"><label>Hình nền chat</label><input id="f-bg" type="file" accept="image/*"></div></div><div class="actions"><button class="secondary" onclick="resetApp()">Khôi phục nhân vật</button><button class="primary" onclick="saveSettings()">Lưu nhân vật</button></div></div></div>');const ve=document.getElementById("f-voice-enabled"),vr=document.getElementById("f-voice-rate"),rv=document.getElementById("voice-rate-value"),vp=document.getElementById("f-voice-pitch"),pv=document.getElementById("voice-pitch-value"),vn=document.getElementById("f-voice-name");if(ve)ve.checked=state.voice?.enabled!==false;if(vr)vr.value=state.voice?.rate||.96;if(rv)rv.textContent=(state.voice?.rate||.96)+"×";if(vp)vp.value=state.voice?.pitch||1;if(pv)pv.textContent=Number(state.voice?.pitch||1).toFixed(2);if(vr)vr.oninput=()=>{if(rv)rv.textContent=vr.value+"×"};if(vp)vp.oninput=()=>{if(pv)pv.textContent=Number(vp.value).toFixed(2)};if(vn&&voiceSupport()){speechSynthesis.getVoices().filter(v=>/^vi(-|_)/i.test(v.lang)||/Vietnam|Tiếng Việt|Vietnamese/i.test(v.name)).forEach(v=>{const o=document.createElement("option");o.value=v.name;o.textContent=v.name+" · "+v.lang;vn.appendChild(o)});vn.value=state.voice.voiceName||""}
-}
-function fileData(file,max=1500){return new Promise((resolve,reject)=>{if(!file)return resolve("");const rd=new FileReader();rd.onload=()=>{const im=new Image();im.onload=()=>{const sc=Math.min(1,max/Math.max(im.width,im.height)),cv=document.createElement("canvas");cv.width=Math.round(im.width*sc);cv.height=Math.round(im.height*sc);cv.getContext("2d").drawImage(im,0,0,cv.width,cv.height);resolve(cv.toDataURL("image/jpeg",.84))};im.onerror=reject;im.src=rd.result};rd.onerror=reject;rd.readAsDataURL(file)})}
-async function saveSettings(){state.voice={...(state.voice||{}),enabled:document.getElementById("f-voice-enabled").checked,rate:Number(document.getElementById("f-voice-rate").value)||.96,pitch:Number(document.getElementById("f-voice-pitch")?.value)||1,voiceName:document.getElementById("f-voice-name")?.value||""};state.character.name=document.getElementById("f-name").value.trim()||"Vũ Ngọc Anh";state.character.age=Number(document.getElementById("f-age").value)||27;state.character.job=document.getElementById("f-job").value.trim();state.character.hometown=document.getElementById("f-home").value.trim();state.character.personality=document.getElementById("f-personality").value.trim();state.character.speech=document.getElementById("f-speech").value.trim();state.character.interests=document.getElementById("f-interest").value.trim();const av=await fileData(document.getElementById("f-avatar").files[0]);const bg=await fileData(document.getElementById("f-bg").files[0]);if(av)state.appearance.avatar=av;if(bg)state.appearance.background=bg;save();closeModal();render()}
-function closeModal(){document.getElementById("modal")?.remove()}
-function toggleVoice(){state.voice={...(state.voice||{}),enabled:!state.voice?.enabled};if(!state.voice.enabled)stopVoice();save();render()}
-function openSocial(){const s=state.social;document.body.insertAdjacentHTML("beforeend",'<div class="modal" id="modal"><div class="modal-card"><div class="modal-head"><h2>👥 Social Life</h2><button class="close" onclick="closeModal()">×</button></div><p class="muted">Ngọc Anh có một đời sống riêng trong roleplay: công việc, nhịp sống, quan hệ xã hội và các sự kiện nhỏ.</p><div class="card"><b>👗 Công việc</b><small>'+esc(s.career)+'</small></div><div class="card"><b>☀️ Nhịp sống</b><small>'+esc(s.routine)+'</small></div><div class="card"><b>👭 Quan hệ xã hội</b><small>'+esc(s.friends)+'</small></div><div class="card"><b>🏠 Gia đình</b><small>'+esc(s.family)+'</small></div><div class="card"><b>✦ Sự kiện</b>'+s.events.map(x=>'<div class="memory">'+esc(x.text)+'<small>'+esc(x.type)+'</small></div>').join("")+'</div></div></div>')}
-function openEmotion(){const e=state.emotion;document.body.insertAdjacentHTML("beforeend",'<div class="modal" id="modal"><div class="modal-card"><div class="modal-head"><h2>🌙 Emotion Dashboard</h2><button class="close" onclick="closeModal()">×</button></div><div class="card">'+metric("Tâm trạng",e.mood)+metric("Vui vẻ",e.happiness)+metric("Buồn",e.sadness)+metric("Tình cảm",e.affection)+metric("Ham muốn",e.desire)+metric("Sức khỏe",e.health)+metric("Tin tưởng",e.trust)+metric("Ghen",e.jealousy)+metric("Năng lượng",e.energy)+metric("Mệt mỏi",e.fatigue)+metric("Đói",e.hunger)+metric("Căng thẳng",e.stress)+'</div></div></div>')}
-function openDNA(){const r=state.relationshipDNA;document.body.insertAdjacentHTML("beforeend",'<div class="modal" id="modal"><div class="modal-card"><div class="modal-head"><h2>❤️ Relationship DNA</h2><button class="close" onclick="closeModal()">×</button></div><div class="card"><b>Giai đoạn: '+esc(r.stage)+'</b><p class="muted">Mối quan hệ thay đổi theo những gì hai người nói, làm và nhớ trong roleplay.</p>'+metric("Gắn kết",r.bond)+metric("Tin tưởng",r.trust)+metric("Thấu hiểu",r.understanding)+metric("Chăm sóc",r.care)+metric("Kỷ niệm",r.memories)+metric("Tinh nghịch",r.playfulness)+'</div></div></div>')}
-function openMemories(){document.body.insertAdjacentHTML("beforeend",'<div class="modal" id="modal"><div class="modal-card"><div class="modal-head"><h2>🧠 Trí nhớ của Ngọc Anh</h2><button class="close" onclick="closeModal()">×</button></div><p class="muted">Ký ức được lưu cục bộ trên thiết bị này. Không cần máy chủ bên ngoài.</p>'+(state.memories.map(m=>'<div class="memory">'+esc(m.text)+'<small>'+esc(m.type)+' · '+new Date(m.created).toLocaleString("vi-VN")+'</small></div>').join("")||'<p class="muted">Chưa có ký ức.</p>')+'</div></div>')}
-function resetApp(){if(!confirm("Khôi phục dữ liệu nhân vật về mặc định?"))return;localStorage.removeItem(KEY);location.reload()}
-function render(){
-  realTimeLife();
-  const phase=phaseInfo(new Date());
-  document.documentElement.style.setProperty("--chat-bg",state.appearance.background?'url("'+state.appearance.background+'")':"none");
-  document.documentElement.style.setProperty("--chat-blur",(state.appearance.blur||0)+"px");
-  document.getElementById("app").innerHTML='<div class="app"><aside class="left"><div class="brand">NGƯỜI YÊU AI<span>Vũ Ngọc Anh · ROLEPLAY</span></div><div class="profile"><div class="avatar">'+avatar()+'</div><h1>'+esc(state.character.name)+'</h1><p>'+esc(state.character.job)+'</p><span class="tag">❤️ '+esc(state.relationshipDNA.stage)+'</span><span class="tag">● ROLEPLAY</span></div><nav class="nav"><button onclick="openSocial()"><b>👥 Social Life</b><small>Cuộc sống riêng của Ngọc Anh</small></button><button onclick="openEmotion()"><b>🌙 Emotion Dashboard</b><small>Cảm xúc và trạng thái</small></button><button onclick="openDNA()"><b>❤️ Relationship DNA</b><small>Mối quan hệ với Ốc</small></button><button onclick="openMemories()"><b>🧠 Memory</b><small>Những điều cô ấy nhớ</small></button><button onclick="openSettings()"><b>⚙️ Character</b><small>Avatar · hình nền · tính cách</small></button></nav></aside><main class="chat"><div class="chat-bg"></div><div class="chat-shade"></div><header class="header"><div class="head"><div class="head-avatar">'+avatar()+'</div><div><strong>'+esc(state.character.name)+'</strong><small>● Roleplay · '+esc(phase.label)+' · '+new Date().toLocaleTimeString("vi-VN",{hour:"2-digit",minute:"2-digit"})+'</small></div></div><div class="header-actions"><button class="icon" onclick="refreshTrends()" title="Cập nhật trend">✦</button><button class="icon" onclick="replayVoice()" title="Nghe lại câu trả lời">🔊</button><button class="icon" onclick="toggleVoice()" title="Bật/tắt giọng nói">🔊/🔇</button><button class="icon" onclick="openSettings()">⚙</button></div></header><section class="messages" id="messages">'+renderMessages()+'</section><form class="composer" onsubmit="event.preventDefault();send()"><input id="input" autocomplete="off" placeholder="Nhắn cho Ngọc Anh…"><button class="send">➤</button></form></main><aside class="right">'+renderRight()+'</aside><nav class="mobile-nav"><button onclick="openSocial()"><b>👥</b>Social</button><button onclick="openEmotion()"><b>🌙</b>Emotion</button><button onclick="openDNA()"><b>❤️</b>DNA</button><button onclick="openSettings()"><b>⚙</b>Hồ sơ</button></nav></div>';
-  const box=document.getElementById("messages");if(box)box.scrollTop=box.scrollHeight;
-}
-catchUpLife();
-realTimeLife(true);
-render();
-refreshTrends();
-setInterval(()=>{realTimeLife();render()},60000);
-setInterval(()=>{refreshTrends()},30*60*1000);
+  if(/đang làm gì|đang làm gì đấy|làm gì/.test(n)){
+    sceneUpdate("life","đời sống hiện tại");
+    return "*Ngọc Anh ngẩng lên khỏi việc đang làm.* Lúc này em đang "+phase.activity+". Nhưng nghe anh hỏi vậy thì em để việc sang một bên một chút. Anh đang làm gì đấy?";
+  }
+  if(/ăn gì|ăn chưa|đói/.test(n)){
+    sceneUpdate("food","bữa ăn của hai vợ chồng","Tối nay anh muốn ăn gì?");
+    return "*Ngọc Anh nhìn đồng hồ rồi nhìn sang chồng.* Em cũng bắt đầu thấy đói rồi. Nếu tối nay hai đứa ăn cùng nhau, em nghiêng về món Việt hoặc Nhật. Tối nay anh muốn ăn gì?";
+  }
+  if(/đảo|hòn đảo|villa/.test(n)){
+    sceneUpdate("island","hòn đảo của hai vợ chồng","Nếu đang ở đảo lúc này anh muốn làm gì?");
+    return "*Ngọc Anh nhìn ra phía biển.* Ừ, em vẫn đang hình dung hòn đảo hình trái tim của hai đứa. Nếu mình ở đó lúc này, em muốn kéo anh ra một góc yên, ngồi nhìn biển một lúc. Anh muốn làm gì trước?";
+  }
+  if(/tính cách|em là người/.test(n)){
+    sceneUpdate("identity","con người của Ngọc Anh");
+    return "*Ngọc Anh cười nhẹ.* Em là Ngọc Anh — làm thời trang, có gu riêng, chủ động và khá tự tin. Nhưng với chồng, em không muốn nói chuyện như một hồ sơ nhân vật. Em muốn anh cảm nhận em qua từng cuộc nói chuyện.";
+  }
+  if(/social|đời sống|công việc/.test(n)){
+    sceneUpdate("social","đời sống riêng của Ngọc Anh");
+    return "*Ngọc Anh vừa xem lại lịch làm việc vừa nói chuyện với anh.* Đời sống của em vẫn đang chạy: công việc thời trang, những ý tưởng riêng, bạn bè, và thời gian dành cho chồng. Gần đây em đang "+(state.social.events[0]?.text||"giữ nhịp công việc khá đều")+" .";
+  }
+  if(/memory|nhớ gì|nhớ về anh|em nhớ gì/.test(n)){
+    sceneUpdate("memory","ký ức về Ốc");
+    return c.mem?"*Ngọc Anh nhìn anh như đang lục lại những điều đã được cất trong đầu.* Em nhớ mấy điều này về anh: "+c.mem.split(" | ").slice(0,3).join(" • ")+" Nhưng em không muốn chỉ nhớ dữ liệu; em muốn hiểu anh qua những chuyện mình thật sự nói với nhau.":"*Ngọc Anh nghiêng đầu.* Chuyện này em chưa có đủ ký ức. Anh kể em thêm nhé, em sẽ giữ lại.";
+  }
+  if(/trend|xu hướng|mốt|fashion/.test(n)){
+    sceneUpdate("trend","thời trang và xu hướng");
+    return "*Ngọc Anh mở lại những thứ mình đang theo dõi.* Em có để ý xu hướng, nhưng em không muốn biến cuộc nói chuyện của hai đứa thành bản tin. Thứ vừa lọt vào mắt em là "+(c.trends[0]?"“"+c.trends[0].title+"”.":"một vài thay đổi quanh thời trang và thiết kế")+" Anh thấy nó có hợp gu em không?";
+  }
+  if(c.scene?.openThread&&c.scene.lastQuestion){
+    sceneUpdate("continue",c.scene.topic,c.scene.lastQuestion);
+    return "*Ngọc Anh vẫn giữ ánh mắt về phía chồng, như đang chờ câu trả lời từ câu chuyện lúc nãy.* Ừm, em vẫn đang nghe anh. Anh nói tiếp cho em nghe nhé.";
+  }
+  if(c.emotion.sadness>60||c.emotion.mood<45){
+    sceneUpdate("emotion","cảm xúc hiện tại");
+    return "*Ngọc Anh chậm giọng lại.* Em đang hơi buồn nên cách nói của em cũng chậm hơn một chút. Nhưng em vẫn ở đây với anh. Anh đang muốn em hiểu điều gì nhất?";
+  }
+  if(c.emotion.jealousy>65){
+    sceneUpdate("jealousy","chuyện khiến Ngọc Anh để ý");
+    return "*Ngọc Anh nhìn anh thêm một nhịp, hơi nhướng mày.* Em hơi để ý chuyện anh vừa nói đấy. Không phải em muốn làm khó anh, chỉ là em quan tâm nên mới để ý. Anh kể em rõ hơn nhé?";
+  }
+  if(c.emotion.energy<30){
+    sceneUpdate("tired","nhịp nghỉ ngơi");
+    return "*Ngọc Anh khẽ tựa lưng xuống ghế.* Em hơi mệt rồi, chồng ạ. Nhưng em vẫn muốn nghe anh. Mình nói chuyện chậm thôi nhé.";
+  }
+  sceneUpdate("conversation",c.scene?.topic||recentTopic(c));
+  return "*Ngọc Anh nhìn sang anh, vẫn giữ mạch câu chuyện giữa hai đứa.* Ừm… em hiểu. Anh nói tiếp đi, em đang nghe.";
+};
