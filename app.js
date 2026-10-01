@@ -227,6 +227,30 @@ function memoryContextForDialogue(text){
  )).slice(0,3);
  return relevant.length?relevant.map(x=>x.text).join(" "):"";
 }
+function behaviorProfile(){
+ const e=state.emotion||{},r=state.relationshipDNA||{},l=state.life||{},m=state.memory||{};
+ const b={energy:e.energy??50,fatigue:e.fatigue??50,stress:e.stress??50,mood:e.mood??50,affection:e.affection??50,trust:e.trust??50};
+ const modes=[];
+ if(b.fatigue>=72||b.energy<=28)modes.push("quiet");
+ if(b.stress>=65)modes.push("gentle");
+ if(b.mood>=78&&b.energy>=60)modes.push("bright");
+ if(b.affection>=82)modes.push("affectionate");
+ if((r.playfulness??50)>=72&&b.mood>=68&&b.stress<55)modes.push("playful");
+ if((m.understandings||[]).length>0||l.currentActivity)modes.push("contextual");
+ return {
+  modes,
+  pace:modes.includes("quiet")?"slow":"normal",
+  initiative:modes.includes("quiet")?"low":(b.energy>=60?"high":"medium"),
+  questions:modes.includes("quiet")?"few":"natural",
+  warmth:b.affection>=80?"high":"normal",
+  humor:modes.includes("playful")?"high":"light"
+ };
+}
+function emotionDialogueContext(){
+ const e=state.emotion||{},p=behaviorProfile();
+ return {emotion:{mood:e.mood,energy:e.energy,stress:e.stress,fatigue:e.fatigue,affection:e.affection,happiness:e.happiness},behavior:p};
+}
+
 function analyzeConversation(text){
  const n=cleanUserText(text),low=n.toLowerCase(),msgs=recentDialogue(16),s=state.scene||{},e=state.emotion||{},r=state.relationshipDNA||{};
  const previousUser=msgs.filter(x=>x.role==="user").slice(-2,-1)[0]?.text||"";
