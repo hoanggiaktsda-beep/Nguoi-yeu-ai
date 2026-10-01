@@ -352,6 +352,7 @@ function generateLifeEvent(force=false){
  const event=templates[phase]||templates["ban đêm"];
  s.events=Array.isArray(s.events)?s.events:[];
  s.events.push({id:memoryItemId("life"),text:event,date:key,phase,time:now,source:"simulated_life"});
+ applyLifeEventEmotion(event);
  if(s.events.length>30)s.events=s.events.slice(-30);
  x.lastLifeEventDate=key;
  if(/công việc|thiết kế/.test(event))upsertMemory(m.episodes,"Ngọc Anh đã có một nhịp công việc trong ngày.",["social-life","work"],{confidence:.7,status:"confirmed",source:"life-engine"});
