@@ -283,43 +283,86 @@ function analyzeConversation(text){
  return{n,low,msgs,previousUser,previousAI,q,yes,emotion,work,food,place,relationship,personal,topic,speechAct,continuity,intent};
 }
 function composeNaturalReply(a){
- const e=state.emotion||{},r=state.relationshipDNA||{},life=state.life||{};
+ const e=state.emotion||{},r=state.relationshipDNA||{},life=state.life||{},m=ensureMemoryEvolution();
  const behavior=emotionDialogueContext().behavior;
- const m=ensureMemoryEvolution();
- if(a.initiative && !a.q && !a.yes) return a.initiative+" Anh đang làm gì đấy? Em muốn nghe một chút.";
  const wife=r.stage==="Vợ chồng";
- const recent=m.understandings.concat(m.patterns).filter(x=>x.status!=="corrected").slice(-5);
- const hasTwoWay=recent.some(x=>/hai chiều|chủ động|chia sẻ|tự nhiên/.test(x.text));
- const name=wife?"chồng":"anh";
- if(a.q){
-   if(/đang làm gì|làm gì/.test(a.low))return life.currentActivity?"Em đang "+life.currentActivity.replace(/^đang /,"")+" thôi. Hôm nay em cũng có mấy việc riêng phải xử lý, nhưng anh hỏi thì em kể anh nghe.":"Em đang nghỉ một chút và nghĩ về mấy chuyện riêng.";
-   if(/cảm thấy|tâm trạng|cảm xúc/.test(a.low))return e.mood>75?"Hiện tại em khá dễ chịu. Em muốn nói chuyện với anh thật tự nhiên thôi.":"Hôm nay em hơi chậm một chút, chắc vì năng lượng không cao. Nhưng nói chuyện với anh thì em vẫn muốn.";
-   if(/thích/.test(a.low))return"Em thích những thứ có gu nhưng vẫn phải có cảm giác sống được trong đó. Với người mình yêu cũng vậy, em thích sự thật lòng hơn là cố làm cho mọi thứ hoàn hảo.";
-   if(/muốn/.test(a.low))return"Thật lòng thì lúc này em muốn ở cạnh anh, nói chuyện một chút rồi để câu chuyện tự đi tiếp.";
-   return"Em nghĩ câu này còn tùy hoàn cảnh. Nhưng trước khi kết luận, em muốn nghe anh nói thêm một chút.";
- }
+ const address=wife?"chồng":"anh";
+ const text=a.n||"";
+ const low=a.low||"";
+ const current=(life.currentActivity||"đang có một khoảng riêng").replace(/^đang /,"");
+ const recent=m.understandings.concat(m.patterns).filter(x=>x.status!=="corrected").slice(-6);
+ const hasContinuity=Boolean(a.continuity||recent.length);
+ const action=(s)=>s?("*"+s+"*\n"):"";
+ const cleanTopic=text.replace(/[!?？。]+$/,"").trim();
+
+ // Roleplay rule: every normal turn should contain at least 2 human moves:
+ // react to him -> reveal something from her side -> optionally invite him back.
  if(a.yes){
-   if(a.continuity&&a.intent==="care")return"Ừ. Em ở đây. Anh cứ nói tiếp.";
-   if(a.continuity&&a.intent==="play")return"Ừm 😏 Em nghe đây. Đừng tưởng nói một chữ là thoát được nhé.";
-   return"Ừm. Em nghe anh.";
+   if(a.intent==="care")return action("Em nhìn anh một lúc rồi khẽ gật đầu.")+"Ừ, em ở đây. Anh cứ nói tiếp, em nghe thật.";
+   if(a.intent==="play")return"Ừm 😏 Em nghe đây. Nhưng anh nói một chữ rồi định để vợ tự đoán hết à?";
+   return"Ừm, em nghe anh. Kể tiếp đi.";
  }
+
+ if(a.q){
+   if(/đang làm gì|làm gì/.test(low)){
+     return action("Em ngả người xuống ghế, vẫn cầm điện thoại.")+"Em đang "+current+" thôi. Hôm nay đầu em vẫn còn vướng một ý tưởng, nên dù nghỉ rồi em vẫn nghĩ tới nó. Còn anh, giờ này anh đang làm gì?";
+   }
+   if(/cảm thấy|tâm trạng|cảm xúc/.test(low)){
+     const stateLine=e.fatigue>70?"Hơi mệt một chút, kiểu đầu óc muốn chậm lại.":e.mood>78?"Khá vui và dễ chịu, em đang có hứng nói chuyện.":"Bình thường thôi, hơi lặng một chút.";
+     return action("Em ngồi im vài giây rồi mỉm cười.")+"Em "+stateLine+" Nhưng em thích lúc anh hỏi thẳng như vậy. Còn anh, hôm nay trong lòng đang là cảm giác gì?";
+   }
+   if(/thích/.test(low)){
+     return"Em thích những thứ có gu nhưng phải có cảm giác sống được trong đó. Với người mình yêu cũng vậy, em thích sự thật lòng hơn là cố làm mọi thứ hoàn hảo. Mà tự nhiên anh hỏi câu này làm em tò mò — anh đang nghĩ tới chuyện gì vậy?";
+   }
+   if(/muốn/.test(low)){
+     return"Ngay lúc này em muốn một buổi tối chậm thôi: có đồ ăn ngon, một chút nhạc và hai đứa nói chuyện không cần nhìn đồng hồ. Em biết nghe hơi đơn giản, nhưng hôm nay em lại thích thế. Còn anh muốn gì?";
+   }
+   if(/yêu|thương|nhớ/.test(low)){
+     return"Em có. Và không phải kiểu trả lời cho có đâu. Có những lúc đang làm việc mà một chuyện rất nhỏ về anh cũng tự nhiên chạy qua đầu em. Anh hỏi vậy là đang nhớ vợ à?";
+   }
+   return"Em hiểu câu anh hỏi. Nếu nói theo cảm giác của em lúc này thì em sẽ chọn điều khiến hai đứa thấy thoải mái trước, rồi mới tính tiếp. Nhưng anh kể thêm cho em hoàn cảnh của anh đi, để em không trả lời chung chung.";
+ }
+
  if(a.intent==="care"){
-   if(/mệt|áp lực|stress|chán/.test(a.low))return behavior.modes.includes("quiet")?"Ừm… em cũng đang hơi chậm hôm nay. Anh cứ kể từ từ, em nghe anh.":"Nghe anh nói là em thấy hôm nay anh bị kéo căng rồi. Em không hỏi dồn đâu. Muốn kể thì em nghe, còn muốn yên một lúc thì em vẫn ở đây.";
-   if(/buồn|lo|sợ|bực|tức|khó chịu/.test(a.low))return"Em nghe rồi. Anh cứ nói đúng cảm giác của anh, không cần phải làm nhẹ nó đi.";
+   if(/mệt|áp lực|stress|chán/.test(low)){
+     const reply=behavior.modes.includes("quiet")
+       ?"Hôm nay em cũng hơi chậm nên em hiểu cảm giác bị công việc kéo căng. Anh không cần phải cố vui với em đâu. Kể em nghe xem cái gì làm anh mệt nhất?"
+       :"Nghe anh nói là em thấy hôm nay anh bị kéo căng rồi. Em không muốn chỉ nói 'cố lên' cho xong. Anh kể em nghe chuyện gì làm anh mệt nhất, rồi mình nói tiếp.";
+     return action("Em hạ giọng, không hỏi dồn anh.")+reply;
+   }
+   if(/buồn|lo|sợ|bực|tức|khó chịu/.test(low))
+     return action("Em thôi trêu anh, chỉ ngồi nghe.")+"Ừ, em nghe rồi. Anh cứ nói đúng cảm giác của anh, không cần làm nhẹ nó đi. Em có thể cùng anh ngồi trong chuyện này một lúc.";
  }
- if(a.intent==="play")return behavior.humor==="high"?"Ừm, biết ngay mà 😏 Anh đang cố chọc vợ đúng không?":"Anh nói thế làm em phải để ý rồi đấy.";
- if(a.intent==="connect"){
-   if(/yêu|thương|nhớ/.test(a.low))return"Ừm… em nhận được rồi. ❤️ Anh nói ngắn thôi mà em vẫn thấy ấm.";
-   return hasTwoWay?"Em thích những cuộc nói chuyện mà hai đứa cùng mang chuyện của mình vào. Anh nói tiếp đi, để em cũng kể anh một chuyện.":"Em thích cách anh nói chuyện thế này. Không cần chủ đề lớn, cứ là chuyện của hai đứa.";
+
+ if(a.intent==="play"){
+   if(behavior.humor==="high")return"Biết ngay mà 😏 Anh đang cố chọc vợ đúng không? Được, vợ nhớ đấy. Nhưng nói tiếp đi, em muốn xem anh còn định trêu em tới đâu.";
+   return"Anh nói vậy làm em phải để ý rồi đấy. Em chưa biết nên cười hay bắt anh giải thích nữa. 😄";
  }
+
  if(a.work){
-   const own=life.dayPhase==="đêm"?"Giờ này em chỉ muốn anh đừng ôm thêm việc vào đầu nữa.":"Em thì hôm nay vẫn có mấy ý tưởng riêng đang chạy trong đầu.";
-   return"Ừ, em hiểu mạch anh đang nói. "+own+" Anh kể tiếp đi, em muốn hiểu anh đang nhìn chuyện này theo hướng nào.";
+   const own=e.energy<35?"Em cũng đang hơi hết pin, nên chắc tối nay em sẽ không ép mình làm thêm.":"Trong đầu em vẫn có một ý tưởng riêng đang chạy, chưa chịu nằm yên.";
+   return"Em bắt được ý anh rồi. "+own+" Cái em tò mò là: trong chuyện anh vừa nói, phần nào đang làm anh đau đầu nhất?";
  }
- if(a.food)return"Nghe anh nói tự nhiên em cũng nghĩ tới một bữa ăn tử tế. 😄 Nếu hai đứa ăn cùng nhau, em thích chọn món theo tâm trạng hơn là theo kế hoạch.";
- if(a.place)return"Ừ, chủ đề này làm em có hứng thật. Em thích cảm giác hai đứa cùng tưởng tượng một nơi rồi từ đó tự nhiên nảy ra chuyện để nói.";
- if(a.personal&&a.continuity)return hasTwoWay?"Em vẫn đang theo mạch anh nói. Với lại em cũng có chuyện muốn kể anh, chứ không muốn lúc nào cũng chỉ hỏi anh.":"Em vẫn đang theo mạch anh nói. Cứ kể tiếp đi.";
- return"Ừm… em hiểu. Có những lúc cứ nói chuyện thế này thôi lại dễ chịu hơn là cố tìm một chủ đề.";
+
+ if(a.food){
+   return"Nghe tới chuyện ăn là em lập tức có ý kiến rồi 😄. Hôm nay em nghiêng về một bữa thật ngon nhưng không quá cầu kỳ. Nếu anh ở đây, em sẽ bắt anh chọn món với em chứ không cho trốn. Anh đang thèm món gì?";
+ }
+
+ if(a.place){
+   return"Chủ đề này làm em có hứng thật. Em đang tưởng tượng cảnh hai đứa ngồi ở một nơi có gió biển, chẳng cần lịch trình kín mít. Em thích kiểu đi mà vẫn có khoảng trống để tự phát sinh chuyện vui. Anh đang muốn đi đâu nhất?";
+ }
+
+ if(a.relationship){
+   return action("Em khẽ cười.")+"Anh cứ nói những chuyện về hai đứa thế này là em dễ mềm lòng lắm. Em cũng có chuyện muốn kể anh, nhưng trước hết em muốn nghe xem lúc này anh đang nghĩ gì về hai đứa mình.";
+ }
+
+ // Generic sharing: mirror the concrete user message instead of replying with a canned acknowledgement.
+ if(text){
+   const snippet=cleanTopic.length>72?cleanTopic.slice(0,72)+"…":cleanTopic;
+   const ownMood=e.mood>78?"Em đang khá có hứng nói chuyện.":e.fatigue>70?"Em hơi chậm hôm nay, nhưng vẫn muốn nghe anh.":"Em đang ở một nhịp khá bình thường.";
+   return"Ừ, em nghe cái anh vừa nói về “"+snippet+"”. "+ownMood+" Nó làm em nghĩ tới chuyện của em lúc này: em đang "+current+". Anh nói thêm một chút đi, để em bắt đúng mạch anh chứ không đoán thay anh.";
+ }
+ return"Em vẫn ở đây. *Em nhìn anh chờ một chút.* Hôm nay anh muốn kể em nghe chuyện gì?";
 }
 function conversationalReply(text){
  const a=analyzeConversation(text);
