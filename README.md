@@ -23,7 +23,7 @@ AI companion **thuần Việt**: một nhân vật cố định, Character DNA, 
 
 GitHub Pages → JavaScript trên trình duyệt → Local AI Brain → bộ nhớ/cảm xúc cục bộ.
 
-Local AI Brain dùng Transformers.js để chạy model ONNX trực tiếp trong trình duyệt; WebGPU được ưu tiên khi thiết bị hỗ trợ, nếu không thì dùng WASM. Transformers.js hỗ trợ chạy model ngay trong browser mà không cần server. citeturn0search3turn0search0
+Local AI Brain dùng Transformers.js để chạy model ONNX trực tiếp trong trình duyệt; WebGPU được ưu tiên khi thiết bị hỗ trợ, nếu không thì dùng WASM. Transformers.js hỗ trợ chạy model ngay trong browser mà không cần server.
 
 ## Chạy hoàn toàn trên GitHub Pages
 
@@ -55,11 +55,11 @@ Collector thật cho TikTok / YouTube / Instagram / Facebook / Google Trends c�
 
 ## Local AI Brain
 
-Model mặc định: `onnx-community/Qwen2.5-0.5B-Instruct`. Model có bản ONNX quantized và hỗ trợ Transformers.js text generation; bản `q4f16` hiện khoảng 483 MB. citeturn1search1turn1search7
+Model mặc định: `onnx-community/Qwen2.5-0.5B-Instruct`. Model có bản ONNX quantized và hỗ trợ Transformers.js text generation; bản `q4f16` hiện khoảng 483 MB.
 
 Lần đầu người dùng bấm **Khởi động AI Brain**, trình duyệt tải model và lưu cache trên thiết bị. Các lượt chat sau có thể tái sử dụng cache. Đây là model chạy phía client, không phải API inference có khóa bí mật.
 
-WebGPU không có trên mọi trình duyệt/thiết bị; hệ thống tự chuyển sang WASM khi không có WebGPU. citeturn0search0
+WebGPU không có trên mọi trình duyệt/thiết bị; hệ thống tự chuyển sang WASM khi không có WebGPU.
 
 ## Voice
 
