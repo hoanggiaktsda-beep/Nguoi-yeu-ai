@@ -42,15 +42,54 @@ function rememberUser(text){
 }
 function clamp(v){return Math.max(0,Math.min(100,v))}
 function updateState(text){const n=text.toLowerCase(),e=state.emotion,r=state.relationshipDNA;if(/yêu|thương|nhớ|ôm|hôn|quan tâm|đẹp|xinh/.test(n)){e.affection=clamp(e.affection+3);e.mood=clamp(e.mood+2);e.happiness=clamp(e.happiness+3);e.trust=clamp(e.trust+1);e.desire=clamp(e.desire+1.5);e.attraction=clamp(e.attraction+1);r.bond=clamp(r.bond+1);r.care=clamp(r.care+1)}if(/xin lỗi|xin loi|cảm ơn|cam on|tin em|tin anh/.test(n)){e.trust=clamp(e.trust+2);r.trust=clamp(r.trust+2);e.stress=clamp(e.stress-1)}if(/buồn|mệt|áp lực|stress|chán|khó chịu/.test(n)){e.mood=clamp(e.mood-4);e.sadness=clamp(e.sadness+5);e.happiness=clamp(e.happiness-3);e.stress=clamp(e.stress+4);e.irritation=clamp(e.irritation+2);r.care=clamp(r.care+1)}if(/cô gái|cô ấy|người khác|nguoi khac|đi với ai/.test(n)){e.jealousy=clamp(e.jealousy+5);e.irritation=clamp(e.irritation+2)}if(/thành công|xong việc|tuyệt|vui|hạnh phúc/.test(n)){e.mood=clamp(e.mood+3);e.happiness=clamp(e.happiness+4);e.sadness=clamp(e.sadness-3);e.stress=clamp(e.stress-2)}e.energy=clamp(e.energy-1);e.fatigue=clamp(e.fatigue+1);e.hunger=clamp(e.hunger+1);e.health=clamp(e.health-(e.stress>75?.3:0));e.happiness=clamp(e.happiness*.7+e.mood*.3);e.sadness=clamp(100-e.happiness);r.memories=clamp(r.memories+.4);r.understanding=clamp(r.understanding+.15);save()}
-function context(){return{mem:state.memories.slice(0,8).map(x=>x.text).join(" | "),emotion:state.emotion,relationship:state.relationshipDNA,user:state.user,character:state.character,trends:state.trends.items||[]}}
+function context(){
+  const recent=state.messages.slice(-8);
+  return {
+    mem:state.memories.slice(0,8).map(x=>x.text).join(" | "),
+    recent,
+    lastAI:[...state.messages].reverse().find(x=>x.role==="ai")?.text||"",
+    lastUser:[...state.messages].reverse().find(x=>x.role==="user")?.text||"",
+    emotion:state.emotion,relationship:state.relationshipDNA,user:state.user,character:state.character,
+    trends:state.trends.items||[],life:state.life,social:state.social
+  }
+}
 function choosePronoun(text){
-  const n=text.toLowerCase();
-  if(/vợ|chồng|hai đứa|hôn nhân|vợ chồng|anh yêu/.test(n))return "wife";
-  return relationTone()==="vợ – chồng"&&Math.random()>.48?"wife":"em";
+  const n=text.toLowerCase(),e=state.emotion;
+  if(/vợ|chồng|hai đứa|hôn nhân|anh yêu|vợ chồng/.test(n))return "wife";
+  if(e.sadness>60||e.affection>92)return "em";
+  return relationTone()==="vợ – chồng" ? "em" : "em";
+}
+function recentTopic(c){
+  const all=c.recent.map(x=>x.text).join(" ").toLowerCase();
+  if(/công việc|thiết kế|thời trang|khách hàng/.test(all))return "công việc";
+  if(/đảo|villa|biển|du lịch/.test(all))return "hòn đảo";
+  if(/ăn|bữa|nhà hàng|món/.test(all))return "bữa ăn";
+  if(/buồn|mệt|áp lực|stress/.test(all))return "cảm xúc của anh";
+  if(/yêu|nhớ|thương|vợ|chồng/.test(all))return "chuyện của hai đứa";
+  return "chuyện hai đứa đang nói";
+}
+function roleMood(){
+  const e=state.emotion;
+  if(e.fatigue>72||e.energy<25)return "dịu, chậm và hơi mệt";
+  if(e.sadness>55||e.mood<40)return "trầm và cần được gần gũi";
+  if(e.jealousy>62||e.irritation>58)return "hơi ghen và để ý";
+  if(e.happiness>78&&e.affection>85)return "ấm áp, vui và rất gần gũi";
+  if(e.desire>70||e.playfulness>78)return "tinh nghịch và thân mật";
+  return "tự nhiên, gần gũi";
+}
+function continuation(c){
+  const topic=recentTopic(c),last=c.lastAI;
+  if(!last)return "";
+  if(topic==="công việc")return " Em vẫn đang ở mạch chuyện công việc lúc nãy, nên em muốn nghe anh nói tiếp chứ không đổi chủ đề đột ngột.";
+  if(topic==="hòn đảo")return " Em vẫn đang hình dung hòn đảo của hai đứa, nên câu chuyện của mình cứ tiếp tục ở đó nhé.";
+  if(topic==="bữa ăn")return " Em vẫn giữ mạch chuyện bữa ăn của hai đứa đây.";
+  if(topic==="cảm xúc của anh")return " Em vẫn ở đây với chuyện anh vừa chia sẻ, không bỏ qua cảm xúc đó đâu.";
+  if(topic==="chuyện của hai đứa")return " Em vẫn đang ở trong câu chuyện của hai đứa, không phải một cuộc chat mới.";
+  return " Em vẫn nhớ mạch mình vừa nói và không muốn trả lời anh như một người xa lạ.";
 }
 function trendLine(){
   const t=(state.trends.items||[])[0];
-  return t?" Em vừa thấy một trend mới: “"+t.title+"”. Em đang nghĩ xem có thể biến nó thành ý tưởng thời trang hay một concept sống nào hợp với mình.":" Hôm nay em cũng đang để ý những xu hướng mới trong thời trang và thiết kế.";
+  return t?" Em vừa để ý trend “"+t.title+"”, nhưng em chỉ mang nó vào câu chuyện khi nó thật sự liên quan.":" Hôm nay em vẫn đang để ý những thay đổi mới quanh thời trang và thiết kế.";
 }
 function phaseInfo(d=new Date()){
   const h=d.getHours();
@@ -69,60 +108,50 @@ function lifeEventFor(p){
 function realTimeLife(force=false){
   const now=Date.now(),d=new Date(now),p=phaseInfo(d),today=d.toLocaleDateString("sv-SE");
   const last=Number(state.life.lastLifeTickAt||state.life.lastActiveAt||now),elapsed=Math.max(0,now-last);
-  state.life.dayPhase=p.label; state.life.dailyDate=today; state.life.currentActivity=p.activity;
-  if(force || elapsed>=5*60*1000){
-    const steps=Math.min(12,Math.max(1,Math.floor(elapsed/(5*60*1000)))),e=state.emotion;
-    e.hunger=clamp(e.hunger+steps*.8); e.fatigue=clamp(e.fatigue+steps*.45); e.energy=clamp(e.energy-steps*.35); e.health=clamp(e.health-(e.fatigue>75?steps*.08:0)); if(e.hunger>75){e.energy=clamp(e.energy-steps*.2);e.mood=clamp(e.mood-steps*.12)} e.happiness=clamp(e.happiness*.96+e.mood*.04);e.sadness=clamp(100-e.happiness);
+  state.life.dayPhase=p.label;state.life.dailyDate=today;state.life.currentActivity=p.activity;
+  if(force||elapsed>=5*60*1000){const steps=Math.min(12,Math.max(1,Math.floor(elapsed/(5*60*1000)))),e=state.emotion;
+    e.hunger=clamp(e.hunger+steps*.8);e.fatigue=clamp(e.fatigue+steps*.45);e.energy=clamp(e.energy-steps*.35);
+    e.health=clamp(e.health-(e.fatigue>75?steps*.08:0));if(e.hunger>75){e.energy=clamp(e.energy-steps*.2);e.mood=clamp(e.mood-steps*.12)}
+    e.happiness=clamp(e.happiness*.96+e.mood*.04);e.sadness=clamp(100-e.happiness);
     if(p.key==="late-night"||p.key==="night"){e.energy=clamp(e.energy-steps*.15);e.stress=clamp(e.stress-steps*.35)}
     else if(p.key==="morning"){e.energy=clamp(e.energy+1);e.stress=clamp(e.stress-1)}
-    if(p.key==="evening")e.mood=clamp(e.mood+.2);
-    state.life.lastLifeTickAt=now;
-  }
-  state.life.lastActiveAt=now; save();
+    if(p.key==="evening")e.mood=clamp(e.mood+.2);state.life.lastLifeTickAt=now;
+  }state.life.lastActiveAt=now;save();
 }
 function catchUpLife(){
-  const now=Date.now(),last=Number(state.life.lastActiveAt||now),gap=now-last;
-  if(gap<30*60*1000)return;
+  const now=Date.now(),last=Number(state.life.lastActiveAt||now),gap=now-last;if(gap<30*60*1000)return;
   const p=phaseInfo(new Date(now)),event=lifeEventFor(p);
-  if(!state.life.catchup.some(x=>x.date===state.life.dailyDate&&x.phase===p.key)){
-    state.life.catchup.unshift({text:event,phase:p.key,date:state.life.dailyDate,time:now});
-    state.life.catchup=state.life.catchup.slice(0,8);
-    state.social.events.unshift({text:event,type:"Nhịp sống",time:now});
-    state.social.events=state.social.events.slice(0,12);
-    memory(event,"Real-Time Life",2);
-  }
+  if(!state.life.catchup.some(x=>x.date===state.life.dailyDate&&x.phase===p.key)){state.life.catchup.unshift({text:event,phase:p.key,date:state.life.dailyDate,time:now});state.life.catchup=state.life.catchup.slice(0,8);state.social.events.unshift({text:event,type:"Nhịp sống",time:now});state.social.events=state.social.events.slice(0,12);memory(event,"Real-Time Life",2)}
 }
 function socialTick(){
   const e=state.emotion;
-  const choices=[
-    {text:"Có một ý tưởng mới trong công việc thời trang làm em khá hào hứng.",type:"Công việc",delta:2},
-    {text:"Em vừa lưu một concept hình ảnh mà em nghĩ Ốc sẽ thích.",type:"Sở thích",delta:1},
-    {text:"Một cuộc hẹn công việc làm em hơi mệt, em muốn chậm lại một chút.",type:"Đời sống",delta:-2}
-  ];
+  const choices=[{text:"Có một ý tưởng mới trong công việc thời trang làm em khá hào hứng.",type:"Công việc",delta:2},{text:"Em vừa lưu một concept hình ảnh mà em nghĩ Ốc sẽ thích.",type:"Sở thích",delta:1},{text:"Một cuộc hẹn công việc làm em hơi mệt, em muốn chậm lại một chút.",type:"Đời sống",delta:-2}];
   const pick=choices[Math.floor(Math.random()*choices.length)];
-  state.social.events.unshift({text:pick.text,type:pick.type,time:Date.now()});state.social.events=state.social.events.slice(0,12);
-  e.mood=clamp(e.mood+pick.delta);e.energy=clamp(e.energy+(pick.delta>0?1:-2));state.social.lastUpdate=Date.now();memory(pick.text,"Social Life",2);save();
+  state.social.events.unshift({text:pick.text,type:pick.type,time:Date.now()});state.social.events=state.social.events.slice(0,12);e.mood=clamp(e.mood+pick.delta);e.energy=clamp(e.energy+(pick.delta>0?1:-2));state.social.lastUpdate=Date.now();memory(pick.text,"Social Life",2);save();
 }
 function reply(text){
   realTimeLife(true);
-  const n=text.toLowerCase(),p=choosePronoun(text),c=context(),pron=p==="wife"?"Vợ":"Em",phase=phaseInfo(new Date());
-  const lifePrefix=" Bây giờ là "+phase.label+", em "+phase.activity+".";
-  if(/^\s*\/trend|trend mới|xu hướng mới/.test(n)){const t=c.trends.slice(0,4);return t.length?"Em vừa cập nhật Trend Pulse từ kho trend trên GitHub. "+t.map(x=>"• "+x.title).join(" ") :"Kho trend chưa có dữ liệu mới; em vẫn có thể tiếp tục roleplay bình thường."}
-  if(/chào|hello|hi|em ơi/.test(n))return "Em đây, chồng gọi là em có mặt ngay. ❤️ Hôm nay anh thế nào?"+lifePrefix+trendLine();
-  if(/nhớ em|nhớ vợ|yêu em|yêu vợ|thương em/.test(n))return p==="wife"?"Vợ cũng nhớ chồng. Anh nói một câu thôi mà em thấy cả ngày dịu xuống rồi. ❤️":"Em cũng nhớ anh. Lại đây kể em nghe hôm nay của anh nào.";
-  if(/buồn|mệt|áp lực|stress|chán/.test(n))return "Em nghe đây. Anh cứ kể hết cho em, không cần phải cố tỏ ra ổn trước mặt em. Em sẽ ở trong câu chuyện này với anh.";
-  if(/đang làm gì|đang làm gì đấy|làm gì/.test(n))return "Em đang sống đúng nhịp của lúc này: "+phase.activity+". "+(state.trends.items[0]?"Em cũng đang để ý trend “"+state.trends.items[0].title+"”.":"Em vẫn để ý những thay đổi mới trong thời trang và thiết kế.");
-  if(/ăn gì|ăn chưa|đói/.test(n))return "Nếu em chọn cho hai đứa, em nghiêng về một bữa Việt thật ngon hoặc món Nhật. Anh muốn em lên một kịch bản hẹn hò tối nay không?";
-  if(/đảo|hòn đảo|villa/.test(n))return "Em nhớ nơi đó. Hòn đảo hình trái tim vẫn là không gian riêng của hai vợ chồng — biển, núi, villa và những ngày mình không cần vội.";
-  if(/tính cách|em là người/.test(n))return "Em là Ngọc Anh: làm thời trang, có gu thẩm mỹ mạnh, tự tin và chủ động. Với người ngoài em khá rõ ràng; với chồng em mềm hơn, tinh tế hơn và thích trêu anh.";
-  if(/social|đời sống|công việc/.test(n))return "Đời sống của em không dừng ở cuộc chat này. Em có công việc, nhịp sống, các mối quan hệ và những sự kiện nhỏ. Gần đây: "+(state.social.events[0]?.text||state.social.routine);
-  if(/memory|nhớ gì|nhớ về anh|em nhớ gì/.test(n))return c.mem?"Em đang nhớ mấy điều gần đây về anh: "+c.mem.split(" | ").slice(0,3).join(" • "):"Em chưa có nhiều ký ức, anh kể thêm cho em nhé.";
-  if(/trend|xu hướng|mốt|fashion/.test(n))return "Em đang theo dõi Trend Pulse trong kho GitHub. "+(c.trends[0]?"Mới nhất em thấy là “"+c.trends[0].title+"”. ":"")+"Nếu trend hợp với gu của em, em sẽ đưa nó vào roleplay như một chủ đề em đang quan tâm, chứ không biến nó thành kiến thức tuyệt đối.";
-  if(c.emotion.mood<45)return pron+" đang hơi buồn một chút, nhưng em vẫn muốn nghe anh nói. Anh đang nghĩ gì vậy?";
-  if(c.emotion.jealousy>65)return pron+" hơi để ý chuyện anh vừa nói đấy. Kể em nghe rõ hơn được không?";
-  if(c.emotion.energy<30)return pron+" hơi mệt rồi, nhưng vẫn muốn nói chuyện với anh. Hay mình chuyển sang một cuộc trò chuyện nhẹ nhàng?";
-  if(c.mem)return pron+" đang nghe anh đây. Em vẫn nhớ chuyện “"+c.mem.split(" | ")[0]+"”. Anh kể tiếp cho em nhé.";
-  return pron+" đang nghe anh đây. Anh muốn mình tiếp tục câu chuyện hiện tại hay mở một tình huống roleplay mới?";
+  const n=text.toLowerCase(),p=choosePronoun(text),c=context(),pron=p==="wife"?"Vợ":"Em",phase=phaseInfo(new Date()),tone=roleMood(),cont=continuation(c);
+  if(/^\s*\/trend|trend mới|xu hướng mới/.test(n)){const t=c.trends.slice(0,4);return t.length?"Em vừa cập nhật Trend Pulse. "+t.map(x=>"• "+x.title).join(" "):"Trend Pulse chưa có dữ liệu mới; mình cứ tiếp tục câu chuyện của hai đứa."}
+  if(/^(chào|hello|hi|em ơi)\b/.test(n)&&c.recent.length<3)return "Em đây, chồng gọi là em có mặt ngay. ❤️ Hôm nay anh thế nào? Em đang ở "+phase.label+", "+phase.activity+".";
+  if(/nhớ em|nhớ vợ|yêu em|yêu vợ|thương em/.test(n)){
+    return p==="wife"?"Vợ cũng nhớ chồng. ❤️ Anh vừa nói vậy là mood của em lên hẳn. Lại đây, kể em nghe hôm nay anh đã làm gì đi."+cont:"Em cũng nhớ anh. ❤️ Em vẫn ở đây, nghe anh kể tiếp.";
+  }
+  if(/buồn|mệt|áp lực|stress|chán/.test(n)){
+    return "Em nghe đây. Anh không cần phải cố ổn trước mặt em. ❤️ Em đang "+tone+" nên em muốn ở cạnh anh một chút. Chuyện gì làm anh nặng lòng từ nãy đến giờ?"+cont;
+  }
+  if(/đang làm gì|đang làm gì đấy|làm gì/.test(n))return "Lúc này em đang "+phase.activity+". Nhưng em vẫn để ý cuộc nói chuyện với anh — "+(c.lastUser? "anh vừa nói chuyện "+recentTopic(c)+" với em nên em vẫn đang ở mạch đó.":"em vẫn chờ anh.") ;
+  if(/ăn gì|ăn chưa|đói/.test(n))return "Em đang hơi để ý chuyện ăn uống vì mức đói của em là "+Math.round(state.emotion.hunger)+"%. Nếu tối nay hai đứa ăn cùng nhau, em nghiêng về món Việt hoặc Nhật. Anh đang thèm gì?";
+  if(/đảo|hòn đảo|villa/.test(n))return "Ừ, em vẫn nhớ hòn đảo hình trái tim của hai đứa. 🌊 Nếu mình đang ở đó lúc này thì em sẽ muốn kéo anh ra một góc yên, ngồi nhìn biển một lúc. "+cont;
+  if(/tính cách|em là người/.test(n))return "Em là Ngọc Anh — làm thời trang, có gu riêng, chủ động và khá tự tin. Nhưng với chồng, em mềm hơn và thích được nói chuyện như một người thật, không phải một hồ sơ nhân vật. "+cont;
+  if(/social|đời sống|công việc/.test(n))return "Đời sống của em vẫn đang chạy: công việc thời trang, nhịp sinh hoạt, những ý tưởng riêng và thời gian dành cho chồng. Gần đây nhất: "+(state.social.events[0]?.text||state.social.routine)+cont;
+  if(/memory|nhớ gì|nhớ về anh|em nhớ gì/.test(n))return c.mem?"Em nhớ mấy điều này về anh: "+c.mem.split(" | ").slice(0,3).join(" • ")+" Nhưng em không muốn chỉ nhắc lại dữ liệu — em muốn hiểu anh qua những cuộc nói chuyện mình đang có."+cont:"Em chưa có đủ ký ức về chuyện này. Anh kể em thêm nhé, em sẽ giữ lại.";
+  if(/trend|xu hướng|mốt|fashion/.test(n))return "Em đang để ý Trend Pulse, nhưng em không muốn biến cuộc nói chuyện thành bản tin. "+(c.trends[0]?"Thứ vừa lọt vào mắt em là “"+c.trends[0].title+"”. ":"")+ "Nếu anh muốn, mình nói xem nó có hợp gu của em không."+cont;
+  if(c.emotion.sadness>60||c.emotion.mood<45)return "Em đang hơi buồn nên cách nói của em cũng chậm hơn một chút. Nhưng em vẫn nghe anh. Anh đang muốn em hiểu điều gì nhất?";
+  if(c.emotion.jealousy>65)return "Em hơi để ý chuyện anh vừa nói đấy. Không phải em muốn làm khó anh, chỉ là em quan tâm nên mới để ý. Anh kể em rõ hơn nhé?";
+  if(c.emotion.energy<30)return "Em hơi mệt rồi, chồng ạ. Nhưng em vẫn muốn nghe anh. Mình nói chuyện chậm thôi nhé.";
+  if(c.lastAI)return "Ừm… em hiểu mạch anh đang nói. "+(tone==="tinh nghịch và thân mật"?"Em đang hơi muốn trêu anh một chút, nhưng kể tiếp đi. ":"")+"Anh nói tiếp đi, em đang nghe."+cont;
+  return "Ừm, em đang nghe anh đây. Mình cứ nói chuyện tự nhiên thôi — em sẽ nhớ mạch này và phản ứng theo cảm xúc của mình.";
 }
 function send(){
   const input=document.getElementById("input"),text=input.value.trim();if(!text)return;input.value="";
