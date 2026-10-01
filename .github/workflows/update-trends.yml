@@ -1,0 +1,67 @@
+name: Update roleplay trends
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 */6 * * *"
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch public RSS trend headlines
+        shell: python
+        run: |
+          import json, urllib.parse, urllib.request, xml.etree.ElementTree as ET
+          from datetime import datetime, timezone
+
+          queries = [
+              ("Thời trang", "fashion trend Vietnam"),
+              ("Kiến trúc", "architecture interior design trend"),
+              ("Công nghệ", "AI creative technology")
+          ]
+          items = []
+          for category, query in queries:
+              url = "https://news.google.com/rss/search?" + urllib.parse.urlencode({
+                  "q": query, "hl": "vi", "gl": "VN", "ceid": "VN:vi"
+              })
+              try:
+                  data = urllib.request.urlopen(url, timeout=20).read()
+                  root = ET.fromstring(data)
+                  for node in root.findall("./channel/item")[:3]:
+                      title = (node.findtext("title") or "").strip()
+                      link = (node.findtext("link") or "").strip()
+                      if title:
+                          items.append({
+                              "title": title,
+                              "summary": f"Trend {category} được cập nhật từ nguồn tin công khai.",
+                              "source": link,
+                              "category": category
+                          })
+              except Exception:
+                  pass
+
+          if not items:
+              print("No fresh trend data; keeping existing trend pack.")
+              raise SystemExit(0)
+
+          payload = {
+              "updatedAt": datetime.now(timezone.utc).isoformat(),
+              "source": "Public RSS via GitHub Actions",
+              "items": items[:9]
+          }
+          with open("trends.json", "w", encoding="utf-8") as f:
+              json.dump(payload, f, ensure_ascii=False, indent=2)
+
+      - name: Commit trend pack
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add trends.json
+          git diff --cached --quiet && exit 0
+          git commit -m "chore: update roleplay trends"
+          git push
