@@ -1,3 +1,9 @@
+
+// BOOT GUARD — hiển thị lỗi thay vì để màn hình đen
+window.addEventListener("error",function(){
+  const root=document.getElementById("app");
+  if(root && !root.innerHTML.trim()) root.innerHTML='<div style="min-height:100dvh;display:grid;place-items:center;padding:24px;background:#0f0d11;color:#f7f2f6;font-family:system-ui;text-align:center"><div><h2>NGƯỜI YÊU AI</h2><p style="color:#aaa">Ứng dụng chưa khởi động được.</p><button onclick="location.reload()" style="padding:12px 18px;border-radius:12px;border:0">Tải lại</button></div></div>';
+});
 const KEY="nguoi-yeu-ai-v3";
 const LOCAL_MODEL="onnx-community/Qwen2.5-0.5B-Instruct";
 const LOCAL_LIB="https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.8.1";
@@ -58,5 +64,10 @@ function openSystem(){document.body.insertAdjacentHTML("beforeend",'<div class="
 function toggleCustomRelationship(){const s=document.getElementById("f-rel"),i=document.getElementById("f-rel-custom");if(s&&i)i.style.display=s.value==="custom"?"block":"none"}
 function saveSetup(){const g=id=>document.getElementById(id)?.value||"";const oldRel=state.character.relationship;const selectedRel=g("f-rel");const customRel=g("f-rel-custom").trim();const chosenRel=selectedRel==="custom"?(customRel?"custom:"+customRel:"custom:Tùy chỉnh"):selectedRel;state.character={...state.character,name:g("f-name").trim()||"Linh",age:Math.max(18,+g("f-age")||25),relationship:chosenRel,birthday:g("f-birthday"),hometown:g("f-hometown"),job:g("f-job"),education:g("f-education"),family:g("f-family"),values:g("f-values"),dreams:g("f-dreams"),fears:g("f-fears"),principles:g("f-principles"),face:g("f-face"),hair:g("f-hair"),body:g("f-body"),style:g("f-style"),outfit:g("f-outfit"),dateoutfit:g("f-dateoutfit"),signature:g("f-signature"),personality:g("f-personality"),thinking:g("f-thinking"),sadReaction:g("f-sad"),careStyle:g("f-care"),triggers:g("f-triggers"),reconcile:g("f-reconcile"),encourage:g("f-encourage"),phrases:g("f-phrases"),interests:g("f-interests"),food:g("f-food"),media:g("f-media"),activities:g("f-activities"),habits:g("f-habits"),accent:g("f-accent"),voice:g("f-voice"),speech:g("f-speech")};state.user={name:g("u-name"),age:g("u-age"),height:g("u-height"),weight:g("u-weight"),assets:g("u-assets"),job:g("u-job"),personality:g("u-personality"),likes:g("u-likes")};state.setup=true;lockCharacterDNA();remember("Hồ sơ của Ốc: "+[state.user.name,state.user.age&&("tuổi "+state.user.age),state.user.height&&("cao "+state.user.height),state.user.weight&&("nặng "+state.user.weight),state.user.job&&("công việc "+state.user.job),state.user.likes&&("sở thích "+state.user.likes)].filter(Boolean).join(", "),"profile",3,["user-profile"]);save();closeModal();render()}
 
+
 // Khởi tạo giao diện ngay khi trang tải
-render();
+try { render(); } catch(err) {
+  const root=document.getElementById("app");
+  if(root) root.innerHTML='<div style="min-height:100dvh;display:grid;place-items:center;padding:24px;background:#0f0d11;color:#f7f2f6;font-family:system-ui;text-align:center"><div><h2>NGƯỜI YÊU AI</h2><p style="color:#aaa">Không thể khởi tạo giao diện.</p><button onclick="localStorage.removeItem("nguoi-yeu-ai-v3");location.reload()" style="padding:12px 18px;border-radius:12px;border:0">Khởi tạo lại</button></div></div>';
+  console.error(err);
+}
