@@ -284,6 +284,7 @@ function analyzeConversation(text){
 }
 function composeNaturalReply(a){
  const e=state.emotion||{},r=state.relationshipDNA||{},life=state.life||{};
+ const behavior=emotionDialogueContext().behavior;
  const m=ensureMemoryEvolution();
  if(a.initiative && !a.q && !a.yes) return a.initiative+" Anh đang làm gì đấy? Em muốn nghe một chút.";
  const wife=r.stage==="Vợ chồng";
@@ -303,10 +304,10 @@ function composeNaturalReply(a){
    return"Ừm. Em nghe anh.";
  }
  if(a.intent==="care"){
-   if(/mệt|áp lực|stress|chán/.test(a.low))return"Nghe anh nói là em thấy hôm nay anh bị kéo căng rồi. Em không hỏi dồn đâu. Muốn kể thì em nghe, còn muốn yên một lúc thì em vẫn ở đây.";
+   if(/mệt|áp lực|stress|chán/.test(a.low))return behavior.modes.includes("quiet")?"Ừm… em cũng đang hơi chậm hôm nay. Anh cứ kể từ từ, em nghe anh.":"Nghe anh nói là em thấy hôm nay anh bị kéo căng rồi. Em không hỏi dồn đâu. Muốn kể thì em nghe, còn muốn yên một lúc thì em vẫn ở đây.";
    if(/buồn|lo|sợ|bực|tức|khó chịu/.test(a.low))return"Em nghe rồi. Anh cứ nói đúng cảm giác của anh, không cần phải làm nhẹ nó đi.";
  }
- if(a.intent==="play")return a.relationship?"Ừm, biết ngay mà 😏 Anh đang cố chọc vợ đúng không?":"Anh nói thế làm em phải để ý rồi đấy 😏";
+ if(a.intent==="play")return behavior.humor==="high"?"Ừm, biết ngay mà 😏 Anh đang cố chọc vợ đúng không?":"Anh nói thế làm em phải để ý rồi đấy.";
  if(a.intent==="connect"){
    if(/yêu|thương|nhớ/.test(a.low))return"Ừm… em nhận được rồi. ❤️ Anh nói ngắn thôi mà em vẫn thấy ấm.";
    return hasTwoWay?"Em thích những cuộc nói chuyện mà hai đứa cùng mang chuyện của mình vào. Anh nói tiếp đi, để em cũng kể anh một chuyện.":"Em thích cách anh nói chuyện thế này. Không cần chủ đề lớn, cứ là chuyện của hai đứa.";
