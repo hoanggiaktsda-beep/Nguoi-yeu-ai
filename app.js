@@ -143,7 +143,7 @@ function sceneUpdate(intent,topic,question=""){
   save();
 }
 function roleplayCall(n,c){
-  const intimate=/\\b(vợ ơi|vợ à|vợ yêu|vợ ơi em|em ơi|ngọc anh ơi|anh gọi em|chồng gọi em)\\b/i.test(n);
+  const intimate=/\b(vợ ơi|vợ à|vợ yêu|vợ ơi em|em ơi|ngọc anh ơi|anh gọi em|chồng gọi em)\b/i.test(n);
   if(!intimate)return "";
   const mood=roleMood();
   sceneUpdate("call","khoảnh khắc hai vợ chồng gọi nhau");
@@ -166,7 +166,7 @@ function reply(text){
   const n=text.toLowerCase(),p=choosePronoun(text),c=context(),pron=p==="wife"?"Vợ":"Em",phase=phaseInfo(new Date()),tone=roleMood(),cont=continuation(c);
   const callReply=roleplayCall(n,c);
   if(callReply)return callReply;
-  if(/^(chào|hello|hi)\\b/.test(n)&&c.recent.length<3){
+  if(/^(chào|hello|hi)\b/.test(n)&&c.recent.length<3){
     sceneUpdate("greeting","bắt đầu một buổi trò chuyện","Hôm nay anh thế nào?");
     return "*Ngọc Anh mỉm cười nhìn chồng.* Chào anh. ❤️ Hôm nay anh thế nào? Em đang ở "+phase.label+", "+phase.activity+".";
   }
