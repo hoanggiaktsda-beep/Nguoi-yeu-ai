@@ -12,7 +12,7 @@ body{overflow:hidden}button,input,textarea,select{font:inherit}button{cursor:poi
 .profile h2{margin:12px 0 4px}.muted{color:var(--muted)}.pill{display:inline-flex;padding:7px 10px;border:1px solid #39323d;border-radius:999px;color:#d8cfd9;font-size:12px}
 .side button,.top button,.mini-btn{border:1px solid #39323d;background:#1b171d;color:#eee;border-radius:12px;padding:10px 13px}.side button:hover,.top button:hover,.mini-btn:hover{background:#272129}
 .chat{min-width:0;display:flex;flex-direction:column;height:100dvh;position:relative}
-.chat-bg{position:absolute;inset:0;background-size:cover;background-position:center;opacity:.45;filter:blur(0);transform:scale(1.02);pointer-events:none}
+.chat-bg{position:absolute;inset:0;background-image:var(--bg-image);background-size:cover;background-position:center;opacity:var(--bg-opacity,.45);filter:blur(var(--bg-blur,0px));transform:scale(1.02);pointer-events:none}
 .chat-overlay{position:absolute;inset:0;background:linear-gradient(180deg,#0f0d1199,#0f0d1166 50%,#0f0d11dd);pointer-events:none}
 .chat>*:not(.chat-bg):not(.chat-overlay){position:relative;z-index:1}
 .top{height:72px;flex:0 0 72px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 24px;background:#120f1490;backdrop-filter:blur(12px)}
