@@ -3,3 +3,8 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_memories_session_key ON memories(session_i
 CREATE INDEX IF NOT EXISTS idx_memories_session ON memories(session_id);
 CREATE TABLE IF NOT EXISTS messages (id TEXT PRIMARY KEY,session_id TEXT NOT NULL,role TEXT NOT NULL,content TEXT NOT NULL,created_at TEXT NOT NULL);
 CREATE INDEX IF NOT EXISTS idx_messages_session ON messages(session_id,created_at);
+CREATE TABLE IF NOT EXISTS session_state(session_id TEXT PRIMARY KEY,emotion_json TEXT NOT NULL,relationship_stage TEXT NOT NULL,intimacy_json TEXT NOT NULL,updated_at TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS social_trends(id TEXT PRIMARY KEY,source TEXT NOT NULL,title TEXT NOT NULL,url TEXT,category TEXT,region TEXT NOT NULL DEFAULT 'VN',language TEXT NOT NULL DEFAULT 'vi',score REAL DEFAULT 0,published_at TEXT,fetched_at TEXT NOT NULL,summary TEXT,tags TEXT);
+CREATE INDEX IF NOT EXISTS idx_social_trends_region_score ON social_trends(region,score DESC);
+CREATE TABLE IF NOT EXISTS social_memories(id TEXT PRIMARY KEY,session_id TEXT NOT NULL,trend_id TEXT,memory TEXT NOT NULL,reaction TEXT,importance INTEGER DEFAULT 2,created_at TEXT NOT NULL);
+CREATE INDEX IF NOT EXISTS idx_social_memories_session ON social_memories(session_id,created_at);
