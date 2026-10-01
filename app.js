@@ -311,7 +311,10 @@ function conversationalReply(text){
  return composeNaturalReply(a);
 }
 function reply(text){
- realTimeLife(true);const n=cleanUserText(text),c=context(),phase=phaseInfo(new Date()),call=roleCall(n.toLowerCase());if(call)return call;
+ realTimeLife(true);
+ ensureMemoryEvolution();
+ const incoming=cleanUserText(text);
+ evolveMemory(incoming,"");const n=cleanUserText(text),c=context(),phase=phaseInfo(new Date()),call=roleCall(n.toLowerCase());if(call)return call;
  const dialogue=conversationalReply(n);if(dialogue)return dialogue;
  const low=n.toLowerCase();
  if(/^\s*\/trend|trend mới|xu hướng mới/.test(low)){const t=c.trends.slice(0,4);sceneUpdate("trend","thời trang và xu hướng");return t.length?"*Ngọc Anh mở lại những thứ mình đang theo dõi.* Em vừa cập nhật Trend Pulse. "+t.map(x=>"“"+x.title+"”").join(" · ")+". Anh muốn nghe em nói kỹ hơn về cái nào?":"*Ngọc Anh nhìn lại danh sách.* Kho trend hôm nay chưa có dữ liệu mới, nhưng em vẫn đang theo dõi."}
