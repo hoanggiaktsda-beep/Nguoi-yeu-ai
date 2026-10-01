@@ -441,6 +441,8 @@ function render(){
 }
 catchUpLife();
 realTimeLife(true);
+generateLifeEvent();
+generateInitiative(true);
 render();
 refreshTrends();
 setInterval(()=>{realTimeLife();render()},60000);
