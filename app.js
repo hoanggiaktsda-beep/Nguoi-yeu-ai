@@ -261,6 +261,7 @@ function analyzeConversation(text){
 function composeNaturalReply(a){
  const e=state.emotion||{},r=state.relationshipDNA||{},life=state.life||{};
  const m=ensureMemoryEvolution();
+ if(a.initiative && !a.q && !a.yes) return a.initiative+" Anh đang làm gì đấy? Em muốn nghe một chút.";
  const wife=r.stage==="Vợ chồng";
  const recent=m.understandings.concat(m.patterns).filter(x=>x.status!=="corrected").slice(-5);
  const hasTwoWay=recent.some(x=>/hai chiều|chủ động|chia sẻ|tự nhiên/.test(x.text));
