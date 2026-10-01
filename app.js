@@ -7,6 +7,7 @@ const DEFAULT={
   relationshipDNA:{stage:"Vợ chồng",bond:92,trust:92,understanding:78,memories:64,care:94,playfulness:82},
   social:{career:"Nhà thiết kế thời trang; có thế giới công việc riêng.",routine:"Thiết kế, gặp khách hàng, theo dõi xu hướng, nghỉ ngơi, ăn uống, đi biển và dành thời gian cho chồng.",friends:"Bạn bè và đồng nghiệp thời trang được xây dần từ roleplay.",family:"Gia đình và các mối quan hệ được bổ sung khi Ốc cung cấp.",events:[],lastUpdate:0},
   trends:{items:[],updatedAt:0,source:"GitHub trend pack"},
+  life:{lastActiveAt:Date.now(),lastLifeTickAt:0,dayPhase:"đêm",dailyDate:"",catchup:[],currentActivity:"đang nghỉ ngơi và theo dõi nhịp sống của mình"},
   memories:[],
   messages:[{role:"ai",text:"Chào chồng ❤️ Em là Ngọc Anh. Từ giờ mình không chỉ chat — mình roleplay một cuộc sống chung. Em có cảm xúc, công việc, social life, ký ức và những thay đổi riêng của mình.",time:Date.now()}]
 };
@@ -49,6 +50,46 @@ function trendLine(){
   const t=(state.trends.items||[])[0];
   return t?" Em vừa thấy một trend mới: “"+t.title+"”. Em đang nghĩ xem có thể biến nó thành ý tưởng thời trang hay một concept sống nào hợp với mình.":" Hôm nay em cũng đang để ý những xu hướng mới trong thời trang và thiết kế.";
 }
+function phaseInfo(d=new Date()){
+  const h=d.getHours();
+  if(h<5)return {key:"late-night",label:"đêm muộn",activity:"đang nghỉ ngơi, tắt bớt đèn và chậm lại sau một ngày dài"};
+  if(h<8)return {key:"dawn",label:"sáng sớm",activity:"đang thức dậy, uống nước và chuẩn bị nhịp ngày mới"};
+  if(h<11)return {key:"morning",label:"buổi sáng",activity:"đang xử lý những việc đầu ngày và lên ý tưởng thời trang"};
+  if(h<14)return {key:"noon",label:"buổi trưa",activity:"đang nghỉ giữa ngày, ăn uống và sắp xếp lại năng lượng"};
+  if(h<18)return {key:"afternoon",label:"buổi chiều",activity:"đang làm việc, xem chất liệu và theo dõi xu hướng mới"};
+  if(h<22)return {key:"evening",label:"buổi tối",activity:"đang chậm lại, chăm chút cho không gian riêng và nghĩ về buổi tối của hai đứa"};
+  return {key:"night",label:"ban đêm",activity:"đang thư giãn, giảm nhịp và chuẩn bị đi ngủ"};
+}
+function lifeEventFor(p){
+  const map={"late-night":"Em đã khép lại ngày hôm nay và đang nghỉ ngơi.","dawn":"Em vừa bắt đầu một ngày mới, nhẹ nhàng và chậm rãi.","morning":"Buổi sáng của em bắt đầu bằng việc sắp xếp lịch và nghĩ về vài ý tưởng mới.","noon":"Em đang dành một khoảng nghỉ để ăn uống và hồi lại năng lượng.","afternoon":"Em đang ở nhịp làm việc và để ý những xu hướng mới trong thời trang, thiết kế.","evening":"Em đang chuyển sang nhịp buổi tối, muốn dành nhiều khoảng trống hơn cho chồng.","night":"Em đang thư giãn và chuẩn bị khép lại ngày."};
+  return map[p.key]||"Em đang sống theo nhịp ngày của mình.";
+}
+function realTimeLife(force=false){
+  const now=Date.now(),d=new Date(now),p=phaseInfo(d),today=d.toLocaleDateString("sv-SE");
+  const last=Number(state.life.lastLifeTickAt||state.life.lastActiveAt||now),elapsed=Math.max(0,now-last);
+  state.life.dayPhase=p.label; state.life.dailyDate=today; state.life.currentActivity=p.activity;
+  if(force || elapsed>=5*60*1000){
+    const steps=Math.min(12,Math.max(1,Math.floor(elapsed/(5*60*1000)))),e=state.emotion;
+    e.hunger=clamp(e.hunger+steps*.8); e.fatigue=clamp(e.fatigue+steps*.45); e.energy=clamp(e.energy-steps*.35);
+    if(p.key==="late-night"||p.key==="night"){e.energy=clamp(e.energy-steps*.15);e.stress=clamp(e.stress-steps*.35)}
+    else if(p.key==="morning"){e.energy=clamp(e.energy+1);e.stress=clamp(e.stress-1)}
+    if(p.key==="evening")e.mood=clamp(e.mood+.2);
+    state.life.lastLifeTickAt=now;
+  }
+  state.life.lastActiveAt=now; save();
+}
+function catchUpLife(){
+  const now=Date.now(),last=Number(state.life.lastActiveAt||now),gap=now-last;
+  if(gap<30*60*1000)return;
+  const p=phaseInfo(new Date(now)),event=lifeEventFor(p);
+  if(!state.life.catchup.some(x=>x.date===state.life.dailyDate&&x.phase===p.key)){
+    state.life.catchup.unshift({text:event,phase:p.key,date:state.life.dailyDate,time:now});
+    state.life.catchup=state.life.catchup.slice(0,8);
+    state.social.events.unshift({text:event,type:"Nhịp sống",time:now});
+    state.social.events=state.social.events.slice(0,12);
+    memory(event,"Real-Time Life",2);
+  }
+}
 function socialTick(){
   const e=state.emotion;
   const choices=[
@@ -61,12 +102,14 @@ function socialTick(){
   e.mood=clamp(e.mood+pick.delta);e.energy=clamp(e.energy+(pick.delta>0?1:-2));state.social.lastUpdate=Date.now();memory(pick.text,"Social Life",2);save();
 }
 function reply(text){
-  const n=text.toLowerCase(),p=choosePronoun(text),c=context(),pron=p==="wife"?"Vợ":"Em";
+  realTimeLife(true);
+  const n=text.toLowerCase(),p=choosePronoun(text),c=context(),pron=p==="wife"?"Vợ":"Em",phase=phaseInfo(new Date());
+  const lifePrefix=" Bây giờ là "+phase.label+", em "+phase.activity+".";
   if(/^\s*\/trend|trend mới|xu hướng mới/.test(n)){const t=c.trends.slice(0,4);return t.length?"Em vừa cập nhật Trend Pulse từ kho trend trên GitHub. "+t.map(x=>"• "+x.title).join(" ") :"Kho trend chưa có dữ liệu mới; em vẫn có thể tiếp tục roleplay bình thường."}
-  if(/chào|hello|hi|em ơi/.test(n))return "Em đây, chồng gọi là em có mặt ngay. ❤️ Hôm nay anh thế nào?"+trendLine();
+  if(/chào|hello|hi|em ơi/.test(n))return "Em đây, chồng gọi là em có mặt ngay. ❤️ Hôm nay anh thế nào?"+lifePrefix+trendLine();
   if(/nhớ em|nhớ vợ|yêu em|yêu vợ|thương em/.test(n))return p==="wife"?"Vợ cũng nhớ chồng. Anh nói một câu thôi mà em thấy cả ngày dịu xuống rồi. ❤️":"Em cũng nhớ anh. Lại đây kể em nghe hôm nay của anh nào.";
   if(/buồn|mệt|áp lực|stress|chán/.test(n))return "Em nghe đây. Anh cứ kể hết cho em, không cần phải cố tỏ ra ổn trước mặt em. Em sẽ ở trong câu chuyện này với anh.";
-  if(/đang làm gì|đang làm gì đấy|làm gì/.test(n))return "Em đang ở giữa một ngày của mình: vừa xử lý công việc, vừa xem trend mới, vừa nghĩ xem tối nay nên dành thời gian cho chồng thế nào.";
+  if(/đang làm gì|đang làm gì đấy|làm gì/.test(n))return "Em đang sống đúng nhịp của lúc này: "+phase.activity+". "+(state.trends.items[0]?"Em cũng đang để ý trend “"+state.trends.items[0].title+"”.":"Em vẫn để ý những thay đổi mới trong thời trang và thiết kế.");
   if(/ăn gì|ăn chưa|đói/.test(n))return "Nếu em chọn cho hai đứa, em nghiêng về một bữa Việt thật ngon hoặc món Nhật. Anh muốn em lên một kịch bản hẹn hò tối nay không?";
   if(/đảo|hòn đảo|villa/.test(n))return "Em nhớ nơi đó. Hòn đảo hình trái tim vẫn là không gian riêng của hai vợ chồng — biển, núi, villa và những ngày mình không cần vội.";
   if(/tính cách|em là người/.test(n))return "Em là Ngọc Anh: làm thời trang, có gu thẩm mỹ mạnh, tự tin và chủ động. Với người ngoài em khá rõ ràng; với chồng em mềm hơn, tinh tế hơn và thích trêu anh.";
@@ -88,7 +131,7 @@ function send(){
 function renderMessages(){return state.messages.length?state.messages.map(m=>'<div class="msg '+m.role+'"><div class="bubble">'+esc(m.text)+'</div><div class="meta">'+(m.role==="ai"?"Ngọc Anh":"Ốc")+" · "+new Date(m.time).toLocaleTimeString("vi-VN",{hour:"2-digit",minute:"2-digit"})+'</div></div>').join(""):'<div class="empty"><h2>Ngọc Anh đang chờ anh</h2><p>Bắt đầu một câu chuyện roleplay.</p></div>'}
 function renderRight(){
   const e=state.emotion,r=state.relationshipDNA,s=state.social,t=state.trends.items||[];
-  return '<div class="section-title">Emotion Dashboard</div><div class="card"><b>🌙 Cảm xúc hiện tại</b>'+metric("Tâm trạng",e.mood)+metric("Tình cảm",e.affection)+metric("Tin tưởng",e.trust)+metric("Ghen",e.jealousy)+metric("Năng lượng",e.energy)+metric("Căng thẳng",e.stress)+'</div><div class="section-title">Relationship DNA</div><div class="card"><b>❤️ '+esc(r.stage)+'</b>'+metric("Gắn kết",r.bond)+metric("Thấu hiểu",r.understanding)+metric("Chăm sóc",r.care)+metric("Kỷ niệm",r.memories)+metric("Tinh nghịch",r.playfulness)+'</div><div class="section-title">Social Life</div><div class="card"><b>👗 Cuộc sống riêng</b><small>'+esc(s.career)+'</small><div class="trend"><strong>Nhịp sống</strong><p>'+esc(s.routine)+'</p></div><div class="trend"><strong>Sự kiện gần đây</strong><p>'+esc(s.events[0]?.text||"Chưa có sự kiện mới.")+'</p></div></div><div class="section-title">Trend Pulse</div><div class="card"><b>✦ Xu hướng mới</b><small>'+esc(trendStatus)+'</small>'+(t.slice(0,3).map(x=>'<div class="trend"><strong>'+esc(x.title)+'</strong><p>'+esc(x.summary||"Đang được Ngọc Anh theo dõi.")+'</p></div>').join("")||'<p class="muted">Đang chờ kho trend.</p>')+'<button class="ghost wide" onclick="refreshTrends()">↻ Cập nhật trend</button></div><div class="section-title">Memory</div><div class="card">'+(state.memories.slice(0,5).map(m=>'<div class="memory">'+esc(m.text)+'<small>'+esc(m.type)+'</small></div>').join("")||'<small>Chưa có ký ức mới.</small>')+'</div>'
+  return '<div class="section-title">Emotion Dashboard</div><div class="card"><b>🌙 Cảm xúc hiện tại</b>'+metric("Tâm trạng",e.mood)+metric("Tình cảm",e.affection)+metric("Tin tưởng",e.trust)+metric("Ghen",e.jealousy)+metric("Năng lượng",e.energy)+metric("Căng thẳng",e.stress)+'</div><div class="section-title">Relationship DNA</div><div class="card"><b>❤️ '+esc(r.stage)+'</b>'+metric("Gắn kết",r.bond)+metric("Thấu hiểu",r.understanding)+metric("Chăm sóc",r.care)+metric("Kỷ niệm",r.memories)+metric("Tinh nghịch",r.playfulness)+'</div><div class="section-title">Real-Time Life</div><div class="card"><b>◷ '+esc(state.life.dayPhase)+'</b><small>Ngọc Anh đang sống theo giờ thực của thiết bị</small><div class="trend"><strong>Hiện tại</strong><p>'+esc(state.life.currentActivity)+'</p></div></div><div class="section-title">Social Life</div><div class="card"><b>👗 Cuộc sống riêng</b><small>'+esc(s.career)+'</small><div class="trend"><strong>Nhịp sống</strong><p>'+esc(s.routine)+'</p></div><div class="trend"><strong>Sự kiện gần đây</strong><p>'+esc(s.events[0]?.text||"Chưa có sự kiện mới.")+'</p></div></div><div class="section-title">Trend Pulse</div><div class="card"><b>✦ Xu hướng mới</b><small>'+esc(trendStatus)+'</small>'+(t.slice(0,3).map(x=>'<div class="trend"><strong>'+esc(x.title)+'</strong><p>'+esc(x.summary||"Đang được Ngọc Anh theo dõi.")+'</p></div>').join("")||'<p class="muted">Đang chờ kho trend.</p>')+'<button class="ghost wide" onclick="refreshTrends()">↻ Cập nhật trend</button></div><div class="section-title">Memory</div><div class="card">'+(state.memories.slice(0,5).map(m=>'<div class="memory">'+esc(m.text)+'<small>'+esc(m.type)+'</small></div>').join("")||'<small>Chưa có ký ức mới.</small>')+'</div>'
 }
 async function refreshTrends(){
   trendStatus="Đang cập nhật…";render();
@@ -111,9 +154,16 @@ function openDNA(){const r=state.relationshipDNA;document.body.insertAdjacentHTM
 function openMemories(){document.body.insertAdjacentHTML("beforeend",'<div class="modal" id="modal"><div class="modal-card"><div class="modal-head"><h2>🧠 Trí nhớ của Ngọc Anh</h2><button class="close" onclick="closeModal()">×</button></div><p class="muted">Ký ức được lưu cục bộ trên thiết bị này. Không cần máy chủ bên ngoài.</p>'+(state.memories.map(m=>'<div class="memory">'+esc(m.text)+'<small>'+esc(m.type)+' · '+new Date(m.created).toLocaleString("vi-VN")+'</small></div>').join("")||'<p class="muted">Chưa có ký ức.</p>')+'</div></div>')}
 function resetApp(){if(!confirm("Khôi phục dữ liệu nhân vật về mặc định?"))return;localStorage.removeItem(KEY);location.reload()}
 function render(){
+  realTimeLife();
+  const phase=phaseInfo(new Date());
   document.documentElement.style.setProperty("--chat-bg",state.appearance.background?'url("'+state.appearance.background+'")':"none");
   document.documentElement.style.setProperty("--chat-blur",(state.appearance.blur||0)+"px");
-  document.getElementById("app").innerHTML='<div class="app"><aside class="left"><div class="brand">NGƯỜI YÊU AI<span>Vũ Ngọc Anh · ROLEPLAY</span></div><div class="profile"><div class="avatar">'+avatar()+'</div><h1>'+esc(state.character.name)+'</h1><p>'+esc(state.character.job)+'</p><span class="tag">❤️ '+esc(state.relationshipDNA.stage)+'</span><span class="tag">● ROLEPLAY</span></div><nav class="nav"><button onclick="openSocial()"><b>👥 Social Life</b><small>Cuộc sống riêng của Ngọc Anh</small></button><button onclick="openEmotion()"><b>🌙 Emotion Dashboard</b><small>Cảm xúc và trạng thái</small></button><button onclick="openDNA()"><b>❤️ Relationship DNA</b><small>Mối quan hệ với Ốc</small></button><button onclick="openMemories()"><b>🧠 Memory</b><small>Những điều cô ấy nhớ</small></button><button onclick="openSettings()"><b>⚙️ Character</b><small>Avatar · hình nền · tính cách</small></button></nav></aside><main class="chat"><div class="chat-bg"></div><div class="chat-shade"></div><header class="header"><div class="head"><div class="head-avatar">'+avatar()+'</div><div><strong>'+esc(state.character.name)+'</strong><small>● Roleplay · đang ở đây với Ốc</small></div></div><div class="header-actions"><button class="icon" onclick="refreshTrends()" title="Cập nhật trend">✦</button><button class="icon" onclick="openSettings()">⚙</button></div></header><section class="messages" id="messages">'+renderMessages()+'</section><form class="composer" onsubmit="event.preventDefault();send()"><input id="input" autocomplete="off" placeholder="Nhắn cho Ngọc Anh…"><button class="send">➤</button></form></main><aside class="right">'+renderRight()+'</aside><nav class="mobile-nav"><button onclick="openSocial()"><b>👥</b>Social</button><button onclick="openEmotion()"><b>🌙</b>Emotion</button><button onclick="openDNA()"><b>❤️</b>DNA</button><button onclick="openSettings()"><b>⚙</b>Hồ sơ</button></nav></div>';
+  document.getElementById("app").innerHTML='<div class="app"><aside class="left"><div class="brand">NGƯỜI YÊU AI<span>Vũ Ngọc Anh · ROLEPLAY</span></div><div class="profile"><div class="avatar">'+avatar()+'</div><h1>'+esc(state.character.name)+'</h1><p>'+esc(state.character.job)+'</p><span class="tag">❤️ '+esc(state.relationshipDNA.stage)+'</span><span class="tag">● ROLEPLAY</span></div><nav class="nav"><button onclick="openSocial()"><b>👥 Social Life</b><small>Cuộc sống riêng của Ngọc Anh</small></button><button onclick="openEmotion()"><b>🌙 Emotion Dashboard</b><small>Cảm xúc và trạng thái</small></button><button onclick="openDNA()"><b>❤️ Relationship DNA</b><small>Mối quan hệ với Ốc</small></button><button onclick="openMemories()"><b>🧠 Memory</b><small>Những điều cô ấy nhớ</small></button><button onclick="openSettings()"><b>⚙️ Character</b><small>Avatar · hình nền · tính cách</small></button></nav></aside><main class="chat"><div class="chat-bg"></div><div class="chat-shade"></div><header class="header"><div class="head"><div class="head-avatar">'+avatar()+'</div><div><strong>'+esc(state.character.name)+'</strong><small>● Roleplay · '+esc(phase.label)+' · '+new Date().toLocaleTimeString("vi-VN",{hour:"2-digit",minute:"2-digit"})+'</small></div></div><div class="header-actions"><button class="icon" onclick="refreshTrends()" title="Cập nhật trend">✦</button><button class="icon" onclick="openSettings()">⚙</button></div></header><section class="messages" id="messages">'+renderMessages()+'</section><form class="composer" onsubmit="event.preventDefault();send()"><input id="input" autocomplete="off" placeholder="Nhắn cho Ngọc Anh…"><button class="send">➤</button></form></main><aside class="right">'+renderRight()+'</aside><nav class="mobile-nav"><button onclick="openSocial()"><b>👥</b>Social</button><button onclick="openEmotion()"><b>🌙</b>Emotion</button><button onclick="openDNA()"><b>❤️</b>DNA</button><button onclick="openSettings()"><b>⚙</b>Hồ sơ</button></nav></div>';
   const box=document.getElementById("messages");if(box)box.scrollTop=box.scrollHeight;
 }
-render();refreshTrends();
+catchUpLife();
+realTimeLife(true);
+render();
+refreshTrends();
+setInterval(()=>{realTimeLife();render()},60000);
+setInterval(()=>{refreshTrends()},30*60*1000);
