@@ -158,6 +158,75 @@ function humanNameThing(text){
  if(words.length<=5)return n;
  return words.slice(0,Math.min(9,words.length)).join(" ")+(words.length>9?"…":"");
 }
+
+function ensureMemoryEvolution(){
+ state.memory=state.memory||{};
+ const m=state.memory;
+ m.facts=Array.isArray(m.facts)?m.facts:[];
+ m.episodes=Array.isArray(m.episodes)?m.episodes:[];
+ m.patterns=Array.isArray(m.patterns)?m.patterns:[];
+ m.understandings=Array.isArray(m.understandings)?m.understandings:[];
+ m.hypotheses=Array.isArray(m.hypotheses)?m.hypotheses:[];
+ m.relationshipInsights=Array.isArray(m.relationshipInsights)?m.relationshipInsights:[];
+ m.lastUpdated=m.lastUpdated||0;
+ return m;
+}
+function memoryItemId(prefix){return prefix+"_"+Date.now().toString(36)+"_"+Math.random().toString(36).slice(2,7)}
+function upsertMemory(list,text,tags,extra){
+ if(!text)return null;
+ const now=Date.now(), key=text.toLowerCase().replace(/\s+/g," ").trim();
+ let item=list.find(x=>x.key===key);
+ if(item){item.count=(item.count||1)+1;item.lastSeen=now;item.confidence=Math.min(1,(item.confidence||.5)+.08);if(extra)Object.assign(item,extra);return item}
+ item={id:memoryItemId("mem"),key,text,tags:tags||[],count:1,confidence:extra?.confidence??.55,firstSeen:now,lastSeen:now,status:extra?.status||"active",source:extra?.source||"conversation"};
+ list.push(item);return item;
+}
+function extractMemorySignals(text){
+ const n=cleanUserText(text),low=n.toLowerCase(),signals={facts:[],preferences:[],feelings:[],events:[]};
+ if(/(?:tôi|mình|anh|ốc)\s+(?:là|làm|đang làm)\s+(.{2,80})/i.test(n))signals.facts.push(RegExp.$1.trim());
+ if(/(?:anh|ốc|mình)\s+(?:thích|khoái|mê)\s+(.{2,100})/i.test(n))signals.preferences.push(RegExp.$1.trim());
+ if(/(?:anh|ốc|mình)\s+(?:không thích|ghét)\s+(.{2,100})/i.test(n))signals.preferences.push("không thích "+RegExp.$1.trim());
+ if(/(?:hôm nay|hôm qua|sáng nay|tối nay|lúc nãy|vừa)\b/i.test(n))signals.events.push(n);
+ if(/(?:mệt|buồn|vui|hạnh phúc|áp lực|stress|chán|nhớ|thương|yêu|lo|sợ|bực|tức)/i.test(low))signals.feelings.push(n);
+ return signals;
+}
+function evolveMemory(text,replyText){
+ const m=ensureMemoryEvolution(),s=extractMemorySignals(text),now=Date.now();
+ s.facts.forEach(x=>upsertMemory(m.facts,"Ốc từng chia sẻ: "+x,["identity","fact"],{confidence:.72}));
+ s.preferences.forEach(x=>upsertMemory(m.facts,"Ốc có xu hướng: "+x,["preference"],{confidence:.68}));
+ s.feelings.forEach(x=>upsertMemory(m.episodes,"Ốc đã chia sẻ cảm xúc: "+x,["emotion"],{confidence:.82,status:"confirmed"}));
+ s.events.forEach(x=>upsertMemory(m.episodes,"Cuộc trò chuyện có nhắc tới: "+x,["event"],{confidence:.72,status:"confirmed"}));
+ const recent=m.facts.concat(m.episodes).slice(-24).map(x=>x.text.toLowerCase()).join(" ");
+ if(m.facts.filter(x=>x.tags?.includes("preference")).length>=2)
+   upsertMemory(m.patterns,"Ốc thường chia sẻ rõ điều mình thích hoặc không thích.",["communication","preference"],{confidence:.62,status:"tentative"});
+ if(/công việc|thiết kế|kiến trúc|render|website|studio|ai/.test(recent))
+   upsertMemory(m.patterns,"Công việc và sáng tạo thường là một phần quan trọng trong cách Ốc trò chuyện.",["work","creative"],{confidence:.62,status:"tentative"});
+ if(/yêu|thương|nhớ|chồng|vợ/.test(text.toLowerCase()))
+   upsertMemory(m.relationshipInsights,"Ốc thường đưa cảm xúc và sự gắn bó của hai vợ chồng vào cuộc trò chuyện.",["relationship"],{confidence:.66,status:"tentative"});
+ updateMemoryUnderstandings();
+ m.lastUpdated=now;
+ save();
+}
+function updateMemoryUnderstandings(){
+ const m=ensureMemoryEvolution();
+ const patterns=m.patterns.filter(x=>x.status!=="corrected");
+ patterns.forEach(p=>{
+   const text=p.text.replace(/^Ốc thường/,"Ngọc Anh đang hiểu rằng Ốc thường");
+   upsertMemory(m.understandings,text,["understanding"].concat(p.tags||[]),{confidence:Math.min(.9,(p.confidence||.5)+.08),status:"tentative",source:"repeated_conversation"});
+ });
+}
+function memoryContextForDialogue(text){
+ const m=ensureMemoryEvolution(),low=cleanUserText(text).toLowerCase();
+ const all=[...m.understandings,...m.patterns,...m.facts,...m.relationshipInsights]
+   .filter(x=>x.status!=="corrected")
+   .filter(x=>!x.tags?.includes("emotion") || /buồn|mệt|vui|áp lực|stress|chán|nhớ|thương|yêu|lo|sợ/.test(low))
+   .sort((a,b)=>(b.lastSeen||0)-(a.lastSeen||0));
+ const relevant=all.filter(x=>(x.tags||[]).some(t=>
+   (t==="work"&&/công việc|thiết kế|kiến trúc|render|website|studio|ai/.test(low))||
+   (t==="preference"&&/thích|muốn|ghét|không thích/.test(low))||
+   (t==="relationship"&&/yêu|thương|nhớ|chồng|vợ|mình|hai đứa/.test(low))
+ )).slice(0,3);
+ return relevant.length?relevant.map(x=>x.text).join(" "):"";
+}
 function analyzeConversation(text){
  const n=cleanUserText(text),low=n.toLowerCase(),msgs=recentDialogue(16),s=state.scene||{},e=state.emotion||{},r=state.relationshipDNA||{};
  const previousUser=msgs.filter(x=>x.role==="user").slice(-2,-1)[0]?.text||"";
