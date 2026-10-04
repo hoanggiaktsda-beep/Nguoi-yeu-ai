@@ -566,28 +566,26 @@ function platformPromptRule(platform){
  };
  return rules[platform]||rules["Khác"];
 }
+function cleanVisualNotes(notes){return String(notes||"").replace(/REALITY CONTEXT:[^\n]*/gi," ").replace(/\s+/g," ").trim().replace(/[.\s]+$/,"")}
 function compileVisualPrompt(v){
  const resolved=realityResolve(v),rv=resolved.v,ctx=resolved.ctx,wardrobe=visualWardrobe(rv),palette=palettesForVisual(rv);
  const stamp=ctx.now.toLocaleString("vi-VN",{hour:"2-digit",minute:"2-digit",day:"2-digit",month:"2-digit",year:"numeric"});
- const ref=rv.canonicalImage
-  ?"Use the supplied MỠ_CANONICAL_REFERENCE as the PRIMARY visual source of truth for the same adult woman's facial identity, distinctive features, long dark softly-wavy hair and realistic toned hourglass silhouette. Preserve identity before any styling change."
-  :"No canonical image is attached. Use MỠ_ID only: adult Vietnamese/East Asian woman, visual age 25–28, about 165 cm, oval soft V-line face, dark-brown almond eyes, refined small nose, softly full nude-pink lips, luminous realistic skin, long dark softly-wavy hair, toned realistic hourglass silhouette.";
- const couple=rv.couple?" Include her adult male partner Ốc only when his supplied reference is available; preserve his reference identity and never invent a face match.":"";
+ const reference=rv.canonicalImage?"Use the supplied MỠ_CANONICAL_REFERENCE as the primary visual source of truth. Preserve the same adult woman's facial identity, distinctive features, hair and realistic silhouette before styling changes.":"No canonical image is attached. Use the established adult MỠ_ID character description without claiming an exact identity match.";
  const notes=cleanVisualNotes(rv.notes);
- const prompt=[
-  "PRIMARY REFERENCE: "+ref+couple,
+ const p=[
+  "PRIMARY REFERENCE: "+reference,
   "SCENE: Photorealistic candid editorial photograph in "+rv.scene+", Hà Nội, Việt Nam, around "+stamp+" ("+ctx.phase+", "+ctx.season+"). Mỡ is "+rv.activity+".",
   "STYLING: "+wardrobe+", palette "+palette+". "+visualModeRules(rv.mode),
-  "POSE & EXPRESSION: Natural believable adult posture, balanced hand placement and gaze appropriate to the activity and garment; elegant, relaxed and unstaged.",
-  "CAMERA: "+rv.camera+". Natural perspective; do not distort identity.",
-  "LIGHTING: "+rv.lighting+". Make daylight/night state, practical fixtures, exposure and shadows physically plausible for "+ctx.phase+" in Hà Nội.",
-  "ENVIRONMENT: Believable architecture, furniture scale, materials, circulation and environmental context. Keep scene, activity, wardrobe and lighting mutually consistent.",
-  "QUALITY: High-end photorealistic lifestyle/editorial photography, realistic skin texture, believable hands and anatomy, coherent materials and depth.",
-  "LOCKS: Preserve canonical identity when a reference is supplied. Adults only; tasteful non-explicit fashion/editorial/lifestyle framing; realistic anatomy; no exaggerated proportions or provocative posing.",
+  "POSE: Natural believable adult posture, hand placement and gaze appropriate to the activity and garment; elegant, relaxed and unstaged.",
+  "CAMERA: "+rv.camera+". Natural perspective and believable depth.",
+  "LIGHTING: "+rv.lighting+". Keep daylight/night state, practical fixtures, exposure and shadows physically plausible for "+ctx.phase+" in Hà Nội.",
+  "ENVIRONMENT: Believable architecture, furniture scale, materials and circulation. Keep scene, activity, wardrobe and lighting mutually consistent.",
+  "QUALITY: High-end photorealistic lifestyle/editorial photography, realistic skin texture, believable hands and anatomy, coherent materials.",
+  "LOCKS: Preserve reference identity when supplied. Adult, tasteful non-explicit fashion/editorial/lifestyle framing; realistic anatomy and proportions.",
   notes?"USER DIRECTION: "+notes+".":"",
-  "PLATFORM ADAPTER — "+rv.platform+": "+platformPromptRule(rv.platform)
+  "PLATFORM: "+rv.platform+". "+platformPromptRule(rv.platform)
  ].filter(Boolean);
- return {prompt:prompt.join("\n\n"),wardrobe,palette,resolved:rv};
+ return {prompt:p.join("\n\n"),wardrobe,palette,resolved:rv};
 }
 function palettesForVisual(v){if(v.color!=="Tự động · tránh lặp")return v.color;const all=["burgundy","champagne","ivory","deep emerald","midnight blue","chocolate","graphite","dusty rose","silver-grey","deep plum"];const used=(v.history||[]).slice(0,5).map(x=>x.palette);return all.find(x=>!used.includes(x))||all[0]}
 function visualSelect(id,label,items,value){return '<div class="field"><label>'+label+'</label><select id="'+id+'">'+items.map(x=>'<option '+(x===value?'selected':'')+'>'+esc(x)+'</option>').join("")+'</select></div>'}
